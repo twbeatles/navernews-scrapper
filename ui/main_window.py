@@ -134,6 +134,7 @@ class MainApp(
             self._worker_registry = WorkerRegistry()
             self._worker_request_seq = 0
             self._worker_cleanup_timeout_count = 0
+            self._worker_cleanup_diag_shown = False
             self.toast_queue = ToastQueue(self)
 
             self._refresh_in_progress = False

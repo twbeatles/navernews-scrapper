@@ -277,6 +277,33 @@ class _FetchWorkerCompletionMixin:
             request_id,
         )
 
+    def _maybe_warn_worker_cleanup_diag(
+        self: MainApp,
+        timeout_count: int,
+        *,
+        threshold: int = 5,
+    ) -> None:
+        """임계치 이상 worker cleanup timeout 누적 시 사용자에게 진단 안내 (1회)."""
+        if timeout_count < threshold:
+            return
+        if bool(getattr(self, "_worker_cleanup_diag_shown", False)):
+            return
+        self._worker_cleanup_diag_shown = True
+        message = (
+            "백그라운드 작업 정리가 지연되고 있습니다. "
+            "저장 후 앱을 재시작하면 더욱 안정적으로 동작합니다."
+        )
+        try:
+            self._status_bar().showMessage(f"⚠ {message}", 8000)
+        except Exception as exc:
+            logger.debug("Worker cleanup diag status bar failed: %s", exc)
+        show_warning_toast = getattr(self, "show_warning_toast", None)
+        if callable(show_warning_toast):
+            try:
+                show_warning_toast(message)
+            except Exception as exc:
+                logger.debug("Worker cleanup diag toast failed: %s", exc)
+
     def _ensure_tab_worker_stopped(
         self: MainApp,
         keyword: str,
@@ -372,6 +399,7 @@ class _FetchWorkerCompletionMixin:
                     timeout_count,
                     force,
                 )
+                self._maybe_warn_worker_cleanup_diag(timeout_count)
                 retain_qthread_until_finished(thread, worker)
                 if force:
                     self._detach_worker_handle(handle, request_id, reason="cleanup timeout")

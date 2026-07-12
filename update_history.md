@@ -2,6 +2,28 @@
 
 이 파일은 현재 릴리스에서 유지해야 할 변경 요약만 기록합니다. 과거 날짜별 누적 로그는 문서 본문에서 제거했으며, 필요하면 Git history와 이전 태그를 기준으로 확인합니다.
 
+## v32.7.5 (2026-07-11)
+
+### PROJECT_AUDIT Follow-up (3.1~3.5)
+
+- `HttpClientConfig.user_agent`를 `core.constants.VERSION`에서 자동 파생하도록 변경 (3.1). 구버전 `32.7.3` 하드코딩 제거.
+- cloud snapshot 병합/프리뷰(`merge_cloud_snapshot_db`, `preview_cloud_snapshot_db`)에 빈 `snapshot_id` 거부 가드 추가 (3.3, defense-in-depth). README 클라우드 동기화 절에 same-machine 스킵·빈 id 거부 정책 명시.
+- `_check_integrity`의 예외 필터를 `except Exception`으로 넓혀 처리 일관성 확보 (3.4). 연결 누출은 기존 `finally` 가드로 이미 방어됨.
+- `cleanup_worker()` timeout 누적 5회 도달 시 최초 1회 재시작 권장 안내(status bar + warning toast) 추가 (3.5). `_worker_cleanup_diag_shown` 플래그로 중복 방지.
+
+### Tests
+
+- `tests/test_http_client_user_agent_version.py` (신규): User-Agent가 VERSION과 일치 + 세션 헤더 전파.
+- `tests/test_retain_qthread_until_finished.py` (신규): `_DETACHED_WORKERS` 등록·해제·즉시 release·None no-op 검증.
+- `tests/test_cloud_snapshot_empty_id_quarantine.py` (신규): 빈/whitespace snapshot_id 거부 (manifest + merge/preview).
+- `tests/test_integrity_check_unexpected_exception.py` (신규): RuntimeError/ValueError 등도 `unreadable` 처리.
+- `tests/test_fetch_cooldown.py` (보강): cleanup timeout 임계치 도달 진단 알림 트리거, 중복 방지, 미만 미표시.
+
+### Validation
+
+- `python -m pytest -q` => `381 passed`, 7 warnings, 5 subtests passed
+- `python -m pyright` => `0 errors, 0 warnings, 0 informations`
+
 ## v32.7.4 (2026-06-25)
 
 ### Audit Follow-up (PROJECT_AUDIT.md)

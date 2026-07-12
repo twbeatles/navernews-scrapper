@@ -195,6 +195,11 @@ class _CloudSyncPreviewMixin:
         normalized_snapshot_id = str(snapshot_id or "").strip()
         normalized_source_machine_id = str(source_machine_id or "").strip()
         normalized_local_machine_id = str(local_machine_id or "").strip()
+        if not normalized_snapshot_id:
+            raise self._new_query_error(
+                "preview_cloud_snapshot_db",
+                ValueError("snapshot_id is required for cloud preview"),
+            )
         if (
             normalized_snapshot_id
             and normalized_source_machine_id

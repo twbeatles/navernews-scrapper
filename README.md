@@ -1,4 +1,4 @@
-# 뉴스 스크래퍼 Pro v32.7.4
+# 뉴스 스크래퍼 Pro v32.7.5
 
 네이버 뉴스 검색 API를 사용하는 PyQt6 데스크톱 앱입니다. 탭별 검색어, 읽음/북마크/메모/태그, 출처 필터, 자동화 규칙, 백업/복원, 클라우드 스냅샷 동기화를 로컬 SQLite DB 위에서 관리합니다.
 
@@ -136,6 +136,8 @@ python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 동기화 병합은 기사 link와 `(link, query_key)` membership을 union하고, 읽음/북마크/메모/태그/삭제 tombstone은 timestamp 최신값을 따릅니다. 손상되었거나 크기 제한을 넘는 스냅샷은 `.invalid/`로 격리됩니다.
 
 빈 cloud sync folder는 core API에서도 거부됩니다. 상대 경로는 현재 작업 디렉터리 기준 절대 경로로 해석한 뒤 snapshot 경로로 사용합니다.
+
+동일 머신에서 생성된 snapshot(`machine_id` 일치)은 자동으로 병합을 건너뛰고 seen으로 기록됩니다. snapshot manifest의 `snapshot_id`가 비어 있으면 거부되어 병합되지 않습니다.
 
 ## 백업/복원 안전 정책
 

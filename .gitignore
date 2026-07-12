@@ -29,6 +29,7 @@ coverage.xml
 .vscode/
 .claude/
 .codegraph/
+.zcode/
 .DS_Store
 Thumbs.db
 

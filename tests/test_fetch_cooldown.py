@@ -52,6 +52,11 @@ class _DummyFetchMain:
     def _detach_worker_handle(self, *args, **kwargs):
         return cast(Any, _FetchWorkerCompletionMixin)._detach_worker_handle(self, *args, **kwargs)
 
+    def _maybe_warn_worker_cleanup_diag(self, timeout_count, *, threshold=5):
+        return cast(Any, _FetchWorkerCompletionMixin)._maybe_warn_worker_cleanup_diag(
+            self, timeout_count, threshold=threshold
+        )
+
     def cleanup_worker(self, keyword=None, request_id=None, only_if_active=False, wait_ms=1000, force=False):
         return cast(Any, _FetchWorkerCompletionMixin).cleanup_worker(
             self,
@@ -92,6 +97,7 @@ class _DummyFetchMain:
         self._last_auto_refresh_by_keyword = {}
         self._worker_registry = WorkerRegistry()
         self._worker_cleanup_timeout_count = 0
+        self._worker_cleanup_diag_shown = False
         self.client_id = "valid-client-id"
         self.client_secret = "valid-client-secret"
 
@@ -439,6 +445,75 @@ class TestFetchCooldown(unittest.TestCase):
 
         self.assertIsNotNone(dummy._worker_registry.get_by_request_id(8))
         self.assertEqual(dummy._worker_cleanup_timeout_count, 1)
+
+    def test_cleanup_worker_diag_warns_after_threshold_timeouts(self):
+        """cleanup timeout 누적이 임계치 도달 시 진단 알림 1회 표시."""
+        dummy = _DummyFetchMain()
+        for rid in range(1, 6):
+            worker = _FakeWorker()
+            thread = _FakeThread(wait_result=False)
+            handle = WorkerHandle(
+                request_id=rid,
+                tab_keyword="AI",
+                search_keyword="AI",
+                db_keyword="AI",
+                exclude_words=[],
+                worker=cast(Any, worker),
+                thread=cast(Any, thread),
+            )
+            dummy._worker_registry.register(handle)
+            dummy._request_start_index[rid] = 1
+            dummy.cleanup_worker(keyword="AI", request_id=rid, wait_ms=0)
+
+        self.assertEqual(dummy._worker_cleanup_timeout_count, 5)
+        self.assertTrue(dummy._worker_cleanup_diag_shown)
+        self.assertTrue(any("재시작" in msg for msg in dummy.warning_messages))
+
+    def test_cleanup_worker_diag_shown_only_once_across_more_timeouts(self):
+        """진단 알림은 임계치 이후 추가 timeout에 중복 표시하지 않음."""
+        dummy = _DummyFetchMain()
+        for rid in range(1, 8):
+            worker = _FakeWorker()
+            thread = _FakeThread(wait_result=False)
+            handle = WorkerHandle(
+                request_id=rid,
+                tab_keyword="AI",
+                search_keyword="AI",
+                db_keyword="AI",
+                exclude_words=[],
+                worker=cast(Any, worker),
+                thread=cast(Any, thread),
+            )
+            dummy._worker_registry.register(handle)
+            dummy._request_start_index[rid] = 1
+            dummy.cleanup_worker(keyword="AI", request_id=rid, wait_ms=0)
+
+        self.assertEqual(dummy._worker_cleanup_timeout_count, 7)
+        diag_count = sum(1 for msg in dummy.warning_messages if "재시작" in msg)
+        self.assertEqual(diag_count, 1)
+
+    def test_cleanup_worker_diag_does_not_warn_below_threshold(self):
+        """임계치 미만에서는 진단 알림 없음."""
+        dummy = _DummyFetchMain()
+        for rid in range(1, 4):
+            worker = _FakeWorker()
+            thread = _FakeThread(wait_result=False)
+            handle = WorkerHandle(
+                request_id=rid,
+                tab_keyword="AI",
+                search_keyword="AI",
+                db_keyword="AI",
+                exclude_words=[],
+                worker=cast(Any, worker),
+                thread=cast(Any, thread),
+            )
+            dummy._worker_registry.register(handle)
+            dummy._request_start_index[rid] = 1
+            dummy.cleanup_worker(keyword="AI", request_id=rid, wait_ms=0)
+
+        self.assertEqual(dummy._worker_cleanup_timeout_count, 3)
+        self.assertFalse(dummy._worker_cleanup_diag_shown)
+        self.assertFalse(any("재시작" in msg for msg in dummy.warning_messages))
 
     def test_cleanup_worker_force_detach_clears_registry_after_timeout(self):
         dummy = _DummyFetchMain()

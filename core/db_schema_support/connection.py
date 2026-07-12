@@ -78,7 +78,7 @@ class _DatabaseConnectionSchemaMixin:
             detail = str(result[0]) if result and result[0] is not None else "unknown"
             logger.error("DB integrity check confirmed corruption: %s", detail)
             return IntegrityCheckResult("corrupt", detail)
-        except (sqlite3.Error, OSError) as e:
+        except Exception as e:
             logger.error("DB integrity check could not read database: %s", e)
             return IntegrityCheckResult("unreadable", str(e))
         finally:
