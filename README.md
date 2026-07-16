@@ -1,196 +1,139 @@
-# 뉴스 스크래퍼 Pro v32.7.6
+# 뉴스 스크래퍼 Pro
 
-네이버 클라우드 **NAVER API HUB** 뉴스 검색 API를 사용하는 PyQt6 데스크톱 앱입니다. 탭별 검색어, 읽음/북마크/메모/태그, 출처 필터, 자동화 규칙, 백업/복원, 클라우드 스냅샷 동기화를 로컬 SQLite DB 위에서 관리합니다.
+관심 키워드별로 네이버 뉴스를 모아 보고, 읽음·북마크·메모·태그로 정리하는 Windows용 뉴스 관리 프로그램입니다.
 
-이 문서는 현재 코드베이스 상태를 기준으로 유지합니다. 오래된 구현 로그와 날짜별 작업 메모는 Git history를 기준으로 확인합니다.
+검색 결과는 PC에 저장되므로 나중에 다시 찾아보거나, 여러 키워드를 탭으로 나눠 동시에 추적할 수 있습니다.
 
-## 현재 기준
+---
 
-- 플랫폼: Windows 우선, Python 3.14, PyQt6, SQLite, requests
-- 뉴스 API: **NAVER API HUB** (`https://naverapihub.apigw.ntruss.com/search/v1/news`)
-- 실행 진입점: `news_scraper_pro.py`
-- 앱 부팅: `core.bootstrap.main()`
-- 메인 UI: `ui.main_window.MainApp`
-- DB facade: `core.database.DatabaseManager`
-- API 연동 상수/헬퍼: `core.naver_api`
-- 패키징: `news_scraper_pro.spec` 기반 PyInstaller onefile
-- 기본 검증: `python -m pytest -q`, `python -m pyright`
+## 이런 분께 어울립니다
 
-## API 키 설정 (NAVER API HUB)
+- 특정 기업·산업·이슈 뉴스를 매일 모아 보고 싶을 때
+- 불필요한 키워드(채용, 광고 등)를 빼고 보고 싶을 때
+- 읽은 기사 / 안 읽은 기사 / 중요 기사(북마크)를 구분해 관리하고 싶을 때
+- 여러 검색 주제를 탭으로 나눠 동시에 관리하고 싶을 때
 
-v32.7.6부터 레거시 **네이버 개발자센터**(`openapi.naver.com`) 연동은 제거되었습니다. **NAVER API HUB**에서 발급한 키만 사용할 수 있습니다.
-
-### 발급 절차
-
-1. [네이버 클라우드 플랫폼](https://www.ncloud.com/)에 로그인합니다.
-2. 콘솔에서 **Application Services → NAVER API HUB** 이용을 신청합니다.
-3. **Application 등록** 시 검색 API(뉴스)를 포함합니다.
-4. Application **인증 정보**에서 Client ID / Client Secret을 복사합니다.
-5. 앱 설정(`Ctrl+,`)에 입력한 뒤 **API 키 검증**을 실행합니다.
-
-참고 문서:
-
-- [NAVER API HUB 사용 가이드](https://guide.ncloud-docs.com/docs/apihub-use)
-- [이관 가이드](https://guide.ncloud-docs.com/docs/apihub-migration)
-- [뉴스 검색 API](https://api.ncloud-docs.com/docs/naver-api-hub-search-news)
-- [제품 소개/요금](https://www.ncloud.com/product/applicationService/naverApiHub)
-
-### 호출 계약 (앱 내부)
-
-| 항목 | 값 |
-|---|---|
-| URL | `https://naverapihub.apigw.ntruss.com/search/v1/news` |
-| Method | `GET` |
-| Client ID 헤더 | `X-NCP-APIGW-API-KEY-ID` |
-| Client Secret 헤더 | `X-NCP-APIGW-API-KEY` |
-| 공통 모듈 | `core/naver_api.py` (`naver_auth_headers`, `parse_naver_api_error`) |
-| Fetch | `core/workers_support/api_worker.py` |
-| 설정 검증 | `ui/_settings_dialog_tasks.py` |
-
-- 기존 개발자센터 Client ID/Secret은 API HUB에서 **재사용 불가**합니다.
-- config 필드 이름(`client_id`, `client_secret`)은 유지하되, 값은 API HUB 신규 키로 교체해야 합니다.
-- 검색 API 일 호출 한도(문서 기준 최대 25,000회)와 한시 무료/종량 정책은 NCP 안내를 따릅니다.
-- 앱은 호출당 `display=100`, `sort=date`를 사용합니다. 조회 시작 위치 `start`는 1~1000입니다.
+---
 
 ## 주요 기능
 
-- 탭 기반 뉴스 검색과 canonical query 기준 중복 탭 방지
-- 제외어, 날짜, 텍스트, 읽음, 중복 숨김, 태그, 출처 필터
-- 기사 읽음/북마크/메모/태그 관리와 탭 간 상태 동기화
-- 전체 아카이브 검색, CSV/Markdown digest 내보내기
-- 자동화 규칙: 태그, 북마크, 읽음, 제외, 알림 억제
-- 출처 alias, 차단 출처, 선호 출처 필터
-- 키워드 그룹, 저장된 검색, 탭별 자동 새로고침 정책
-- 설정 export/import, 자동/수동 백업, pending restore
-- 로컬 DB + ZIP 스냅샷 기반 클라우드 동기화
-- 단일 인스턴스, 트레이, Windows 자동 시작
+### 탭으로 키워드 관리
+- 관심 검색어마다 탭을 만들어 뉴스를 따로 모읍니다
+- 같은 검색 조건의 탭이 중복으로 열리지 않도록 방지합니다
+- 탭마다 자동 새로고침 간격을 다르게 둘 수 있습니다
 
-## 프로젝트 구조
+### 똑똑한 검색
+- 기본 검색: `주식`
+- 제외어: `주식 -코인` (코인 관련 제외)
+- 여러 키워드 + 제외: `인공지능 AI -광고 -채용`
+- 본문/제목 텍스트 필터, 날짜 범위, 읽지 않은 기사만 보기
+- 중복 기사 숨기기, 태그·출처 필터
 
-```text
-navernews-tabsearch/
-├── news_scraper_pro.py          # 실행 진입점 + 공개 re-export
-├── news_scraper_pro.spec        # PyInstaller onefile 설정
-├── core/                        # DB, workers, config, sync, backup, query parser
-│   ├── naver_api.py             # NAVER API HUB URL/헤더/오류 파싱
-│   ├── database.py              # DatabaseManager facade
-│   ├── workers_support/         # ApiWorker, DBWorker, job workers
-│   ├── db_queries_support/      # fetch/count/archive/query helpers
-│   ├── db_mutations_support/    # upsert/state/tag/maintenance mutations
-│   ├── cloud_sync_support/      # snapshot I/O and import flow
-│   └── runtime_support/         # DATA_DIR and legacy runtime migration
-├── ui/                          # MainApp, NewsTab, dialogs, styles
-│   ├── main_window_support/
-│   ├── main_window_fetch_support/
-│   ├── main_window_io_support/
-│   └── news_tab_support/
-├── tests/                       # pytest regression suite
-├── database_manager.py          # root compatibility wrapper
-├── query_parser.py              # root compatibility wrapper
-├── workers.py                   # root compatibility wrapper
-└── styles.py                    # root compatibility wrapper
-```
+### 기사 정리
+- 제목을 클릭하면 읽음 처리
+- 북마크, 메모, 태그 지정
+- 출처 이름 별칭(Alias), 차단 출처, 선호 출처 설정
+- 자동화 규칙: 조건에 맞으면 자동 태그/북마크/읽음 처리 등
 
-Root compatibility wrappers are intentionally kept. New code should prefer `core.*` and `ui.*` imports unless it is maintaining legacy public paths.
+### 나중에 다시 찾기
+- 전체 아카이브 검색으로 과거 기사 검색
+- 자주 쓰는 필터 조합을 “저장된 검색”으로 보관
+- 키워드 그룹으로 관련 검색어를 묶어 관리
 
-## 실행
+### 내보내기 · 백업 · 동기화
+- 현재 필터 결과를 CSV 또는 Markdown으로 내보내기
+- 설정/데이터 백업 및 복원
+- 클라우드 폴더(예: OneDrive, NAS 공유 폴더)로 다른 PC와 기사 동기화
+- Windows 트레이 상주, PC 시작 시 자동 실행(선택)
+
+---
+
+## 시작하기
+
+### 1. 프로그램 실행
+
+- 배포본: `NewsScraperPro_Safe.exe` 를 실행합니다
+- 소스에서 실행하는 경우:
 
 ```bash
 pip install PyQt6 requests
 python news_scraper_pro.py
 ```
 
-패키징된 실행 파일이 있으면 `dist/NewsScraperPro_Safe.exe`를 실행합니다.
+처음 실행하면 API 키 설정 안내가 나타납니다.
 
-처음 실행 시 API 키가 없으면 설정 안내가 표시됩니다. NAVER API HUB 키를 입력한 뒤 검증하세요.
+### 2. API 키 발급 (필수, 최초 1회)
 
-## 검증
+뉴스를 받아오려면 네이버 클라우드의 **NAVER API HUB** 키가 필요합니다.  
+(예전에 쓰던 **네이버 개발자센터** 키는 더 이상 사용할 수 없습니다.)
 
-```bash
-python -m pytest -q
-python -m pyright
-```
+1. [네이버 클라우드 플랫폼](https://www.ncloud.com/)에 가입·로그인합니다  
+2. 콘솔에서 **Application Services → NAVER API HUB** 이용을 신청합니다  
+3. **Application 등록** 시 **검색(뉴스)** API를 포함합니다  
+4. **인증 정보**에서 **Client ID**, **Client Secret**을 복사합니다  
 
-문서/인코딩 변경 후에는 아래 smoke test도 같이 확인합니다.
+자세한 화면 안내: [NAVER API HUB 사용 가이드](https://guide.ncloud-docs.com/docs/apihub-use) · [제품 소개](https://www.ncloud.com/product/applicationService/naverApiHub)
 
-```bash
-python -m pytest tests/test_encoding_smoke.py tests/test_version_history_guard.py tests/test_spec_runtime_tmpdir.py -q
-```
+### 3. 앱에 키 입력
 
-API HUB 연동 회귀:
+1. 메뉴에서 **설정**을 엽니다 (`Ctrl+,`)  
+2. **Client ID / Client Secret**을 붙여 넣습니다  
+3. **API 키 검증**을 눌러 정상 여부를 확인합니다  
+4. 저장합니다  
 
-```bash
-python -m pytest tests/test_naver_api_hub.py tests/test_settings_validation_http_policy.py -q
-```
+### 4. 첫 탭 만들기
 
-## 빌드
+1. **새 탭** (`Ctrl+T`)을 누릅니다  
+2. 검색어를 입력합니다 (예: `반도체`, `부동산 -분양`)  
+3. 새로고침하면 뉴스가 쌓이기 시작합니다  
 
-```bash
-python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
-```
+---
 
-- 산출물: `dist/NewsScraperPro_Safe.exe`
-- `news_icon.ico`는 있으면 실행 파일 아이콘으로 사용합니다.
-- `runtime_tmpdir`는 고정하지 않고 대상 PC의 기본 임시 폴더를 사용합니다.
+## 기본 사용법
 
-## 데이터 위치
+### 검색어 작성 팁
 
-기본 런타임 데이터는 `DATA_DIR`에 저장됩니다.
+| 입력 예시 | 의미 |
+|---|---|
+| `삼성전자` | 해당 키워드 뉴스 |
+| `삼성전자 -주가` | “주가”가 들어간 기사 제외 |
+| `전기차 배터리 -채용` | 여러 관심어 + 채용 공고 제외 |
 
-- Windows: `%LOCALAPPDATA%\NaverNewsScraperPro`
-- macOS: `~/Library/Application Support/NaverNewsScraperPro`
-- Linux: `$XDG_DATA_HOME/NaverNewsScraperPro` 또는 `~/.local/share/NaverNewsScraperPro`
-- `NEWS_SCRAPER_DATA_DIR`: 런타임 데이터 위치 강제
-- `NEWS_SCRAPER_PORTABLE=1`: 앱 폴더를 런타임 위치로 사용
+- 제외어만 있는 검색(예: `-광고`)은 사용할 수 없습니다. 관심 키워드를 하나 이상 넣으세요.
 
-주요 파일은 `news_scraper_config.json`, `news_database.db`, `news_scraper.log`, `pending_restore.json`, `backups/`, `news_scraper_pro.lock`입니다. 실행 폴더에 남은 레거시 런타임 파일은 시작 시 `DATA_DIR`로 비파괴 마이그레이션됩니다.
+### 기사 다루기
 
-## 검색/필터 의미
+- **읽음**: 제목 클릭  
+- **북마크 / 메모 / 태그**: 기사 메뉴 또는 관련 버튼 사용  
+- **더 불러오기**: 이미 받은 목록 아래쪽에서 이어서 조회  
+- **전체 새로고침**: `Ctrl+R` 또는 `F5`  
 
-- 탭 표시명과 관계없이 실제 scope는 `query_key = build_fetch_key(parse_search_query(raw_query))` 기준입니다.
-- API query는 양수 키워드를 공백으로 결합하고, 대표 DB keyword는 첫 양수 키워드를 사용합니다.
-- 제외어-only 검색은 탭 추가/이름 변경/import에서 차단됩니다.
-- `%`, `_`, `\`는 LIKE wildcard가 아니라 literal 문자로 처리합니다.
-- 공백으로 나뉜 텍스트 필터는 token-AND 의미입니다.
-- FTS schema/backfill은 유지하지만, false negative 방지를 위해 FTS rowid hard prefilter는 사용하지 않습니다.
+### 필터 활용
 
-## DB/Worker 계약
+탭 상단에서 다음을 조합할 수 있습니다.
 
-- `DatabaseManager.upsert_news(...) -> tuple[int, int]`는 기존 공개 API로 유지됩니다.
-- `DatabaseManager.upsert_news_detailed(...) -> NewsUpsertResult`는 저장과 현재 query scope의 신규 link 계산을 한 경로에서 처리합니다.
-- `DatabaseManager.count_news(...) -> int`는 기존 공개 API로 유지됩니다.
-- `DatabaseManager.count_news_states(...) -> NewsCountSummary`는 같은 scope의 total/unread count를 단일 쿼리로 계산합니다.
-- `ApiWorker.finished` payload shape는 `items`, `new_items`, `new_count`, `total`, `filtered`, `added_count`, `dup_count`를 유지합니다.
-- `DBWorker` full reload는 가능하면 `count_news_states(...)`를 사용하고, append는 known total을 재사용합니다.
-- 탭 배지는 DB load의 unread count와 NewsTab 로컬 unread cache를 우선 사용해 불필요한 count refresh를 줄입니다.
-- 단일 탭 새로고침, 더 불러오기, 순차 새로고침은 모두 `fetch_news()`에서 API 자격증명을 중앙 검증한 뒤 worker를 생성합니다.
-- 탭 닫기/이름 변경은 기존 fetch worker 정리가 timeout되면 탭 상태 변경을 보류합니다.
-- API HTTP 오류는 Search API 평면 오류(`errorCode`/`errorMessage`)와 API Gateway 중첩 오류(`error.message`)를 `core.naver_api.parse_naver_api_error`로 통일 파싱합니다.
-- 401/403은 `auth_error`로 분류해 사용자에게 API HUB 키 확인을 안내합니다.
+- 텍스트 필터 (여러 단어는 모두 포함되어야 함)  
+- 읽지 않은 기사만  
+- 중복 숨기기  
+- 날짜 범위  
+- 태그 / 선호 출처  
 
-## 설정 Export/Import
+자주 쓰는 조합은 **저장된 검색**으로 남겨 두면 다음에 한 번에 복원됩니다.
 
-- 현재 export schema는 `1.3`입니다.
-- API 자격증명은 export/import와 cloud snapshot settings에서 제외됩니다.
-- `automation_rules`와 `publisher_aliases`는 일반 설정 export/import에는 포함되고 cloud snapshot settings에서는 제외됩니다.
-- `tabs`, `search_history`, `pagination_state`, `pagination_totals`, `saved_searches`, `tab_refresh_policies`는 canonical query/fetch key 기준으로 정규화됩니다.
-- 다른 PC의 export에서 들어온 자동 시작 설정은 로컬 오등록 방지를 위해 안전하게 보정됩니다.
-- 메모는 저장 경로와 CSV 가져오기에서 최대 10,000자로 정규화됩니다. 초과분은 잘리고 UI/import 결과에 표시됩니다.
-- CSV/Markdown 내보내기 dialog의 기본 파일명은 검색어 원문이 아니라 OS-safe filename component를 사용합니다.
+### 데이터 내보내기 · 정리
 
-## 클라우드 동기화
+- **내보내기** (`Ctrl+S`): 현재 탭·필터 결과를 CSV 또는 Markdown으로 저장  
+- **아카이브 검색** (`Ctrl+Shift+F`): 전체 저장 기사 검색  
+- 설정에서 **오래된 기사 정리**(북마크는 유지) 가능  
 
-클라우드 폴더에는 live SQLite DB를 직접 두지 않고 `news_scraper_sync_*.zip` 스냅샷만 교환합니다. 스냅샷에는 manifest, secret 제거 settings, SQLite backup API로 만든 DB 복사본이 들어갑니다.
+### 백업과 다른 PC 동기화
 
-동기화 병합은 기사 link와 `(link, query_key)` membership을 union하고, 읽음/북마크/메모/태그/삭제 tombstone은 timestamp 최신값을 따릅니다. 손상되었거나 크기 제한을 넘는 스냅샷은 `.invalid/`로 격리됩니다.
+- **수동 백업**: 설정 복구 지점을 만들 때 사용 (DB 포함)  
+- **클라우드 동기화**: 공유 폴더를 지정하면 스냅샷 형태로 기사·상태를 맞춥니다  
+  - API 키는 동기화·설정 내보내기에 **포함되지 않습니다** (보안)  
+  - 다른 PC에서도 각자 API 키를 입력해야 합니다  
 
-빈 cloud sync folder는 core API에서도 거부됩니다. 상대 경로는 현재 작업 디렉터리 기준 절대 경로로 해석한 뒤 snapshot 경로로 사용합니다.
-
-동일 머신에서 생성된 snapshot(`machine_id` 일치)은 자동으로 병합을 건너뛰고 seen으로 기록됩니다. snapshot manifest의 `snapshot_id`가 비어 있으면 거부되어 병합되지 않습니다.
-
-## 백업/복원 안전 정책
-
-백업 삭제, 즉시 복원, pending restore 예약/적용은 backup name을 단일 디렉터리 이름으로만 허용합니다. 절대 경로, 드라이브 포함 경로, `..`, `/`, `\`가 포함된 이름은 backup root 밖을 가리킬 수 있으므로 거부됩니다.
+---
 
 ## 단축키
 
@@ -202,16 +145,46 @@ python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 | `Ctrl+F` | 검색/필터 포커스 |
 | `Ctrl+S` | CSV 또는 Markdown 내보내기 |
 | `Ctrl+Shift+F` | 전체 아카이브 검색 |
-| `Ctrl+Shift+T` | 태그 관리자 |
+| `Ctrl+Shift+T` | 태그 관리 |
 | `Ctrl+Shift+A` | 자동화 규칙 |
 | `Ctrl+,` | 설정 |
-| `Alt+1~9` | 탭 바로가기 |
+| `Alt+1` ~ `Alt+9` | 탭 바로가기 |
+| `F1` | 도움말 |
 
-## 관련 문서
+앱 안 **설정 → 도움말 / 단축키** 탭에서도 확인할 수 있습니다.
 
-- `project_structure_analysis.md`: 현재 아키텍처와 변경 진입점
-- `claude.md`, `gemini.md`: AI assistant용 작업 가이드
-- `update_history.md`: 현재 버전 중심 변경 요약
+---
+
+## 자주 묻는 질문
+
+**Q. 예전 네이버 개발자센터 키를 넣었는데 안 됩니다.**  
+A. v32.7.6부터는 **NAVER API HUB** 키만 지원합니다. 클라우드 콘솔에서 새로 발급받아 주세요.
+
+**Q. API 키 검증에 실패합니다.**  
+A. Client ID/Secret 복사 오류, Application에 검색(뉴스) API 미포함, 네트워크 차단을 확인해 주세요. 설정에서 **API 키 검증** 메시지의 안내를 참고하세요.
+
+**Q. 기사가 더 이상 안 불러와집니다.**  
+A. 네이버 검색 API는 조회 위치상 한 검색당 최대 약 1,000건까지 가져올 수 있습니다. 날짜 필터·제외어로 범위를 줄이거나, 키워드를 나눠 탭을 만드세요.
+
+**Q. 데이터는 어디에 저장되나요?**  
+A. Windows 기본 위치: `%LOCALAPPDATA%\NaverNewsScraperPro`  
+(설정, 기사 DB, 로그, 백업 폴더가 여기에 모입니다.)
+
+**Q. 설정 export에 API 키가 안 들어갑니다.**  
+A. 의도된 동작입니다. 키는 기기마다 직접 입력하는 것이 안전합니다.
+
+**Q. 프로그램이 두 개 실행되나요?**  
+A. 단일 인스턴스로 동작합니다. 이미 실행 중이면 새 창 대신 기존 창을 사용합니다.
+
+---
+
+## 도움이 더 필요할 때
+
+- 앱 내 **설정 → 도움말**
+- 변경 이력: [`update_history.md`](update_history.md)
+- 개발·구조 참고(기여자용): [`project_structure_analysis.md`](project_structure_analysis.md), [`claude.md`](claude.md)
+
+---
 
 ## 라이선스
 
