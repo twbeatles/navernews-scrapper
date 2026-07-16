@@ -105,11 +105,11 @@ class _SettingsDialogContentMixin:
         form = QGridLayout()
 
         self.txt_id = QLineEdit(self.config.get("client_id", ""))
-        self.txt_id.setPlaceholderText("네이버 개발자센터에서 발급받은 Client ID")
+        self.txt_id.setPlaceholderText("NAVER API HUB에서 발급받은 Client ID")
 
         self.txt_sec = QLineEdit(self.config.get("client_secret", ""))
         self.txt_sec.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_sec.setPlaceholderText("Client Secret")
+        self.txt_sec.setPlaceholderText("Client Secret (API HUB)")
 
         self.chk_show_pw = QCheckBox("비밀번호 표시")
         self.chk_show_pw.stateChanged.connect(
@@ -123,7 +123,7 @@ class _SettingsDialogContentMixin:
         btn_get_key = QPushButton("🔑 API 키 발급받기")
         btn_get_key.clicked.connect(
             lambda: QDesktopServices.openUrl(
-                QUrl("https://developers.naver.com/apps/#/register")
+                QUrl("https://www.ncloud.com/product/applicationService/naverApiHub")
             )
         )
 

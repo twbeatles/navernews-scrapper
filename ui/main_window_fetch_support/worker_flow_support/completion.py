@@ -230,9 +230,18 @@ class _FetchWorkerCompletionMixin:
             elif error_kind in {"network_error", "timeout"}:
                 dialog_title = "네트워크 오류"
                 detail_hint = "네트워크 연결 상태를 확인한 뒤 다시 시도해주세요."
+            elif error_kind == "auth_error":
+                dialog_title = "API 인증 오류"
+                detail_hint = (
+                    "NAVER API HUB Client ID/Secret을 설정에서 확인해주세요.\n\n"
+                    "기존 네이버 개발자센터 키는 사용할 수 없습니다."
+                )
             else:
                 dialog_title = "API 오류"
-                detail_hint = "API 키와 네트워크 연결 상태를 확인해주세요."
+                detail_hint = (
+                    "NAVER API HUB 키와 네트워크 연결 상태를 확인해주세요.\n"
+                    "설정 > API 키 검증으로 인증 정보를 다시 확인할 수 있습니다."
+                )
 
             self._status_bar().showMessage(f"❌ '{keyword}' 오류: {error_msg}", 5000)
             QMessageBox.critical(

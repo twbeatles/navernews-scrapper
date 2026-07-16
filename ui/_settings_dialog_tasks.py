@@ -12,6 +12,11 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from core.constants import DATA_DIR, RUNTIME_PATHS, RuntimePaths
 from core.database import DatabaseManager
 from core.http_client import HttpClientConfig
+from core.naver_api import (
+    NAVER_NEWS_SEARCH_URL,
+    naver_auth_headers,
+    parse_naver_api_error,
+)
 from core.validation import ValidationUtils
 from core.workers import (
     AsyncJobWorker,
@@ -56,14 +61,11 @@ class _SettingsDialogTasksMixin:
         *,
         timeout: int,
     ) -> Dict[str, Any]:
-        headers = {
-            "X-Naver-Client-Id": client_id,
-            "X-Naver-Client-Secret": client_secret,
-        }
+        headers = naver_auth_headers(client_id, client_secret)
         session = self._create_validation_session()
         try:
             response = session.get(
-                "https://openapi.naver.com/v1/search/news.json",
+                NAVER_NEWS_SEARCH_URL,
                 headers=headers,
                 params={"query": "테스트", "display": 1},
                 timeout=max(5, int(timeout)),
@@ -73,18 +75,21 @@ class _SettingsDialogTasksMixin:
                 "status_code": int(response.status_code),
                 "error_kind": "",
                 "error_message": "",
+                "error_code": "",
             }
             if 300 <= int(response.status_code) < 400:
                 payload["error_kind"] = "redirect_error"
                 payload["error_message"] = "API 검증 응답이 리다이렉트를 반환해 중단했습니다."
                 return payload
             if response.status_code != 200:
-                payload["error_kind"] = "http_error"
+                status_code = int(response.status_code)
+                payload["error_kind"] = (
+                    "auth_error" if status_code in (401, 403) else "http_error"
+                )
                 try:
-                    payload["error_message"] = response.json().get(
-                        "errorMessage",
-                        "알 수 없는 오류",
-                    )
+                    error_code, error_message = parse_naver_api_error(response.json())
+                    payload["error_code"] = error_code
+                    payload["error_message"] = error_message
                 except (ValueError, TypeError, KeyError):
                     payload["error_message"] = (
                         response.text[:200] if response.text else "응답 파싱 실패"

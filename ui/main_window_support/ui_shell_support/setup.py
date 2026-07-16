@@ -200,8 +200,9 @@ class _MainWindowSetupShellMixin:
                 self,
                 "🚀 뉴스 스크래퍼 Pro에 오신 것을 환영합니다!",
                 "네이버 뉴스를 검색하려면 API 키가 필요합니다.\n\n"
-                "네이버 개발자 센터에서 무료로 발급받을 수 있습니다.\n"
-                "(https://developers.naver.com)\n\n"
+                "네이버 클라우드 플랫폼의 NAVER API HUB에서\n"
+                "Application을 등록하고 Client ID/Secret을 발급받으세요.\n"
+                "(https://www.ncloud.com/product/applicationService/naverApiHub)\n\n"
                 "지금 API 키를 설정하시겠습니까?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes,

@@ -1,6 +1,8 @@
 # Project Audit
 
 > 본 문서는 코드 수정 없이 README.md / claude.md / update_history.md / CodeGraph MCP / pytest 실행 결과를 바탕으로 작성되었다. 감사 대상 버전은 `core/constants.py` `VERSION = "32.7.4"` 기준이다.
+>
+> **후속 상태 (v32.7.6):** 뉴스 API 연동은 NAVER Developers Center에서 **NAVER API HUB**로 이관되었다. 현재 엔드포인트/헤더는 `core/naver_api.py`를 기준으로 한다. 아래 본문의 일부 버전·User-Agent 서술은 감사 시점 스냅샷이며, 구현 현황은 README / update_history.md를 우선한다.
 
 ## 1. Executive Summary
 

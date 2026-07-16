@@ -2,6 +2,33 @@
 
 이 파일은 현재 릴리스에서 유지해야 할 변경 요약만 기록합니다. 과거 날짜별 누적 로그는 문서 본문에서 제거했으며, 필요하면 Git history와 이전 태그를 기준으로 확인합니다.
 
+## v32.7.6 (2026-07-16)
+
+### NAVER API HUB 이관
+
+- 뉴스 검색 호출을 레거시 Developers Center(`openapi.naver.com`, `X-Naver-Client-*`)에서 **NAVER API HUB**로 전환했습니다.
+- 신규 엔드포인트: `https://naverapihub.apigw.ntruss.com/search/v1/news`
+- 인증 헤더: `X-NCP-APIGW-API-KEY-ID` / `X-NCP-APIGW-API-KEY`
+- 공통 모듈 `core/naver_api.py` 추가 (`naver_auth_headers`, `parse_naver_api_error`, `format_naver_http_error`)
+- `ApiWorker`와 설정 화면 API 키 검증이 동일 URL/헤더/오류 파서를 사용합니다.
+- Search API 평면 오류와 API Gateway 중첩 오류를 모두 파싱합니다. 401/403은 `auth_error`로 안내합니다.
+- 설정 UI/도움말/첫 실행 안내를 API HUB 발급 기준으로 갱신했습니다.
+- **기존 네이버 개발자센터 키는 더 이상 동작하지 않습니다.** NCP 콘솔에서 API HUB Application을 등록하고 새 키를 입력해야 합니다.
+
+### Docs
+
+- README, claude.md, gemini.md, project_structure_analysis.md를 API HUB 기준으로 전면 갱신했습니다.
+
+### Tests
+
+- `tests/test_naver_api_hub.py` (신규): URL/헤더/오류 파싱 계약
+- `tests/test_settings_validation_http_policy.py` (보강): API HUB URL·헤더·Gateway nested error
+
+### Validation
+
+- `python -m pytest -q` => `388 passed`, 7 warnings, 5 subtests passed
+- `python -m pyright` => `0 errors`
+
 ## v32.7.5 (2026-07-11)
 
 ### PROJECT_AUDIT Follow-up (3.1~3.5)

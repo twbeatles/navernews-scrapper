@@ -10,6 +10,12 @@ import requests
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.database import DatabaseConnectionError, DatabaseQueryError, DatabaseWriteError
+from core.naver_api import (
+    NAVER_NEWS_SEARCH_URL,
+    format_naver_http_error,
+    naver_auth_headers,
+    parse_naver_api_error,
+)
 from core.protocols import ClosableProtocol, RequestGetProtocol
 from core.query_parser import build_fetch_key
 from core.workers_support.http_policy import (
@@ -172,11 +178,8 @@ class ApiWorker(QObject):
         if not self.db_keyword:
             self.db_keyword = self.search_query
 
-        headers = {
-            "X-Naver-Client-Id": self.cid.strip(),
-            "X-Naver-Client-Secret": self.csec.strip(),
-        }
-        url = "https://openapi.naver.com/v1/search/news.json"
+        headers = naver_auth_headers(self.cid, self.csec)
+        url = NAVER_NEWS_SEARCH_URL
         self.last_error_meta = {
             "kind": "unknown",
             "status_code": 0,
@@ -270,22 +273,25 @@ class ApiWorker(QObject):
                         if resp.status_code != 200:
                             try:
                                 error_data = resp.json()
-                                error_msg = error_data.get("errorMessage", "알 수 없는 오류")
-                                error_code = error_data.get("errorCode", "")
-                            except (json.JSONDecodeError, KeyError, ValueError):
+                                error_code, error_msg = parse_naver_api_error(error_data)
+                            except (json.JSONDecodeError, KeyError, ValueError, TypeError):
                                 error_msg = f"HTTP {resp.status_code}"
                                 error_code = ""
-                            if 500 <= int(resp.status_code) < 600 and attempt < self.max_retries - 1:
+                            status_code = int(resp.status_code)
+                            if 500 <= status_code < 600 and attempt < self.max_retries - 1:
                                 backoff_seconds = self._retry_backoff_seconds(attempt)
                                 self._safe_emit(self.progress, f"서버 오류. {backoff_seconds}초 후 재시도...")
                                 if not self._sleep_with_cancel(backoff_seconds):
                                     return
                                 continue
+                            error_kind = (
+                                "auth_error" if status_code in (401, 403) else "http_error"
+                            )
                             self._emit_error(
-                                f"API 오류 {resp.status_code} ({error_code}): {error_msg}",
-                                kind="http_error",
-                                status_code=resp.status_code,
-                                retryable=500 <= int(resp.status_code) < 600,
+                                format_naver_http_error(status_code, error_code, error_msg),
+                                kind=error_kind,
+                                status_code=status_code,
+                                retryable=500 <= status_code < 600,
                             )
                             return
 

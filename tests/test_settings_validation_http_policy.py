@@ -4,6 +4,11 @@ from typing import Any, cast
 
 import requests
 
+from core.naver_api import (
+    NAVER_API_KEY_HEADER,
+    NAVER_API_KEY_ID_HEADER,
+    NAVER_NEWS_SEARCH_URL,
+)
 from ui._settings_dialog_tasks import _SettingsDialogTasksMixin
 
 
@@ -89,8 +94,17 @@ class TestSettingsValidationHttpPolicy(unittest.TestCase):
 
         self.assertEqual(parent.create_http_session_calls, 1)
         self.assertEqual(len(session.calls), 1)
-        self.assertEqual(session.calls[0]["timeout"], 27)
-        self.assertFalse(session.calls[0]["allow_redirects"])
+        call = session.calls[0]
+        self.assertEqual(call["url"], NAVER_NEWS_SEARCH_URL)
+        self.assertEqual(call["timeout"], 27)
+        self.assertFalse(call["allow_redirects"])
+        self.assertEqual(
+            call["headers"],
+            {
+                NAVER_API_KEY_ID_HEADER: "id",
+                NAVER_API_KEY_HEADER: "secret",
+            },
+        )
         self.assertTrue(session.close_called)
         self.assertEqual(result["status_code"], 200)
         self.assertEqual(result["error_kind"], "")
@@ -105,6 +119,29 @@ class TestSettingsValidationHttpPolicy(unittest.TestCase):
         self.assertEqual(result["status_code"], 302)
         self.assertEqual(result["error_kind"], "redirect_error")
         self.assertTrue(session.close_called)
+
+    def test_validation_parses_gateway_nested_error(self):
+        session = _DummySession(
+            response=_DummyResponse(
+                401,
+                {
+                    "error": {
+                        "errorCode": "200",
+                        "message": "Authentication Failed",
+                        "details": "Authentication information are missing.",
+                    }
+                },
+            )
+        )
+        parent = _DummyParent(session)
+        dialog = _ValidationDialog(parent=parent)
+
+        result = dialog._run_api_validation_request("id", "secret", timeout=15)
+
+        self.assertEqual(result["status_code"], 401)
+        self.assertEqual(result["error_kind"], "auth_error")
+        self.assertEqual(result["error_code"], "200")
+        self.assertIn("Authentication Failed", result["error_message"])
 
     def test_validation_timeout_returns_timeout_kind_and_closes_session(self):
         session = _DummySession(raises=requests.Timeout("slow"))

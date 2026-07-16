@@ -9,12 +9,12 @@ news_scraper_pro.py
   -> core.bootstrap.main()
   -> ui.main_window.MainApp
   -> core.database.DatabaseManager
-  -> core.workers_support.ApiWorker / DBWorker
+  -> core.naver_api + core.workers_support.ApiWorker / DBWorker
 ```
 
-- `core/`: 런타임 경로, 설정, DB schema/query/mutation, worker, backup, cloud sync, query parser
+- `core/`: 런타임 경로, 설정, DB schema/query/mutation, worker, NAVER API HUB 헬퍼, backup, cloud sync, query parser
 - `ui/`: MainApp, NewsTab, dialog, settings, styles, rendering/action/loading support
-- `tests/`: 공개 API 호환성, DB 의미, worker lifecycle, UI 성능, cloud/backup/settings 회귀 테스트
+- `tests/`: 공개 API 호환성, DB 의미, worker lifecycle, UI 성능, cloud/backup/settings/API HUB 회귀 테스트
 - root wrappers: `database_manager.py`, `query_parser.py`, `workers.py`, `styles.py` 등 legacy import 유지용
 
 ## 런타임 흐름
@@ -25,14 +25,16 @@ news_scraper_pro.py
 2. 단일 인스턴스와 pending restore를 처리합니다.
 3. `RuntimePaths`가 `DATA_DIR`를 정하고 레거시 런타임 파일을 비파괴 마이그레이션합니다.
 4. `MainApp`이 설정, DB, 탭, 트레이, 자동 새로고침을 조립합니다.
+5. API 키가 없으면 NAVER API HUB 발급 안내를 표시합니다.
 
 ### Fetch
 
 1. `MainApp`이 탭 query를 `parse_search_query(...)`와 `build_fetch_key(...)`로 canonicalize합니다.
-2. `ApiWorker`가 worker-owned `requests.Session`으로 네이버 API를 호출합니다.
-3. `DatabaseManager.upsert_news_detailed(...)`가 기사와 query membership을 저장하고 현재 scope의 신규 link를 반환합니다.
+2. `ApiWorker`가 `core.naver_api.naver_auth_headers(...)`와 `NAVER_NEWS_SEARCH_URL`로 API HUB 뉴스 검색을 호출합니다.
+3. 응답 item을 파싱한 뒤 `DatabaseManager.upsert_news_detailed(...)`가 기사와 query membership을 저장하고 현재 scope의 신규 link를 반환합니다.
 4. 자동화 규칙과 알림은 이번 fetch에서 새로 감지된 link 집합을 기준으로 동작합니다.
 5. 탭은 DB reload로 화면과 count/badge를 맞춥니다.
+6. HTTP 오류는 `parse_naver_api_error`로 메시지화하고, 401/403은 `auth_error`로 UI에 전달합니다.
 
 ### DB Load
 
@@ -53,6 +55,7 @@ news_scraper_pro.py
 |---|---|---|
 | 부팅 | `core/bootstrap.py` | QApplication, 단일 인스턴스, pending restore |
 | 런타임 경로 | `core/runtime_support/` | DATA_DIR, portable mode, legacy migration |
+| NAVER API HUB | `core/naver_api.py` | URL, 인증 헤더, 오류 파싱 |
 | DB facade | `core/database.py` | connection pool과 mixin 조립 |
 | DB schema | `core/db_schema_support/` | table/index/schema migration |
 | DB query | `core/db_queries_support/` | fetch/count/archive/analytics query |
@@ -62,6 +65,7 @@ news_scraper_pro.py
 | Main support | `ui/main_window_support/` | shell, config, badge, tray, maintenance |
 | Fetch orchestration | `ui/main_window_fetch_support/` | refresh flow and worker cleanup |
 | Import/export/sync UI | `ui/main_window_io_support/` | settings, cloud, data export/import |
+| Settings API UI | `ui/_settings_dialog_*.py` | 키 입력, 검증, 도움말 |
 | News tab | `ui/news_tab.py`, `ui/news_tab_support/` | tab state, loading, rendering, actions |
 | Dialogs | `ui/dialogs_support/` | archive, tags, aliases, automation, backup |
 
@@ -79,6 +83,7 @@ news_scraper_pro.py
 
 | 작업 | 우선 확인 위치 |
 |---|---|
+| API HUB 엔드포인트/헤더/오류 | `core/naver_api.py`, `core/workers_support/api_worker.py`, `ui/_settings_dialog_tasks.py` |
 | 새 DB field/index | `core/db_schema_support/`, `tests/test_db_queries.py` |
 | fetch 저장 의미 변경 | `core/db_mutations_support/news_upsert.py`, `core/workers_support/api_worker.py` |
 | 목록/count/filter 변경 | `core/db_queries_support/fetch.py`, `ui/news_tab_support/loading_support/` |
@@ -97,17 +102,15 @@ news_scraper_pro.py
 - DB query 실패는 빈 결과로 숨기지 않고 `DatabaseQueryError`로 드러냅니다.
 - PyQt worker는 cancel/cleanup 경로와 thread affinity를 함께 검증합니다.
 - `.md`, `.spec`, `.json`, `.ini`, `.yml`, `.yaml`, `.py`는 UTF-8로 유지합니다.
+- API URL/헤더를 여러 파일에 하드코딩하지 말고 `core/naver_api.py`를 재사용합니다.
+- 레거시 Developers Center 엔드포인트로 회귀하지 않습니다.
 
-## 검증 세트
+## 검증 명령
 
 ```bash
 python -m pytest -q
 python -m pyright
 python -m pytest tests/test_encoding_smoke.py tests/test_version_history_guard.py tests/test_spec_runtime_tmpdir.py -q
-```
-
-패키징 변경이나 릴리스 전에는 아래도 실행합니다.
-
-```bash
+python -m pytest tests/test_naver_api_hub.py tests/test_settings_validation_http_policy.py -q
 python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 ```

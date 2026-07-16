@@ -1,18 +1,56 @@
-# 뉴스 스크래퍼 Pro v32.7.5
+# 뉴스 스크래퍼 Pro v32.7.6
 
-네이버 뉴스 검색 API를 사용하는 PyQt6 데스크톱 앱입니다. 탭별 검색어, 읽음/북마크/메모/태그, 출처 필터, 자동화 규칙, 백업/복원, 클라우드 스냅샷 동기화를 로컬 SQLite DB 위에서 관리합니다.
+네이버 클라우드 **NAVER API HUB** 뉴스 검색 API를 사용하는 PyQt6 데스크톱 앱입니다. 탭별 검색어, 읽음/북마크/메모/태그, 출처 필터, 자동화 규칙, 백업/복원, 클라우드 스냅샷 동기화를 로컬 SQLite DB 위에서 관리합니다.
 
 이 문서는 현재 코드베이스 상태를 기준으로 유지합니다. 오래된 구현 로그와 날짜별 작업 메모는 Git history를 기준으로 확인합니다.
 
 ## 현재 기준
 
 - 플랫폼: Windows 우선, Python 3.14, PyQt6, SQLite, requests
+- 뉴스 API: **NAVER API HUB** (`https://naverapihub.apigw.ntruss.com/search/v1/news`)
 - 실행 진입점: `news_scraper_pro.py`
 - 앱 부팅: `core.bootstrap.main()`
 - 메인 UI: `ui.main_window.MainApp`
 - DB facade: `core.database.DatabaseManager`
+- API 연동 상수/헬퍼: `core.naver_api`
 - 패키징: `news_scraper_pro.spec` 기반 PyInstaller onefile
 - 기본 검증: `python -m pytest -q`, `python -m pyright`
+
+## API 키 설정 (NAVER API HUB)
+
+v32.7.6부터 레거시 **네이버 개발자센터**(`openapi.naver.com`) 연동은 제거되었습니다. **NAVER API HUB**에서 발급한 키만 사용할 수 있습니다.
+
+### 발급 절차
+
+1. [네이버 클라우드 플랫폼](https://www.ncloud.com/)에 로그인합니다.
+2. 콘솔에서 **Application Services → NAVER API HUB** 이용을 신청합니다.
+3. **Application 등록** 시 검색 API(뉴스)를 포함합니다.
+4. Application **인증 정보**에서 Client ID / Client Secret을 복사합니다.
+5. 앱 설정(`Ctrl+,`)에 입력한 뒤 **API 키 검증**을 실행합니다.
+
+참고 문서:
+
+- [NAVER API HUB 사용 가이드](https://guide.ncloud-docs.com/docs/apihub-use)
+- [이관 가이드](https://guide.ncloud-docs.com/docs/apihub-migration)
+- [뉴스 검색 API](https://api.ncloud-docs.com/docs/naver-api-hub-search-news)
+- [제품 소개/요금](https://www.ncloud.com/product/applicationService/naverApiHub)
+
+### 호출 계약 (앱 내부)
+
+| 항목 | 값 |
+|---|---|
+| URL | `https://naverapihub.apigw.ntruss.com/search/v1/news` |
+| Method | `GET` |
+| Client ID 헤더 | `X-NCP-APIGW-API-KEY-ID` |
+| Client Secret 헤더 | `X-NCP-APIGW-API-KEY` |
+| 공통 모듈 | `core/naver_api.py` (`naver_auth_headers`, `parse_naver_api_error`) |
+| Fetch | `core/workers_support/api_worker.py` |
+| 설정 검증 | `ui/_settings_dialog_tasks.py` |
+
+- 기존 개발자센터 Client ID/Secret은 API HUB에서 **재사용 불가**합니다.
+- config 필드 이름(`client_id`, `client_secret`)은 유지하되, 값은 API HUB 신규 키로 교체해야 합니다.
+- 검색 API 일 호출 한도(문서 기준 최대 25,000회)와 한시 무료/종량 정책은 NCP 안내를 따릅니다.
+- 앱은 호출당 `display=100`, `sort=date`를 사용합니다. 조회 시작 위치 `start`는 1~1000입니다.
 
 ## 주요 기능
 
@@ -34,6 +72,7 @@ navernews-tabsearch/
 ├── news_scraper_pro.py          # 실행 진입점 + 공개 re-export
 ├── news_scraper_pro.spec        # PyInstaller onefile 설정
 ├── core/                        # DB, workers, config, sync, backup, query parser
+│   ├── naver_api.py             # NAVER API HUB URL/헤더/오류 파싱
 │   ├── database.py              # DatabaseManager facade
 │   ├── workers_support/         # ApiWorker, DBWorker, job workers
 │   ├── db_queries_support/      # fetch/count/archive/query helpers
@@ -63,6 +102,8 @@ python news_scraper_pro.py
 
 패키징된 실행 파일이 있으면 `dist/NewsScraperPro_Safe.exe`를 실행합니다.
 
+처음 실행 시 API 키가 없으면 설정 안내가 표시됩니다. NAVER API HUB 키를 입력한 뒤 검증하세요.
+
 ## 검증
 
 ```bash
@@ -74,6 +115,12 @@ python -m pyright
 
 ```bash
 python -m pytest tests/test_encoding_smoke.py tests/test_version_history_guard.py tests/test_spec_runtime_tmpdir.py -q
+```
+
+API HUB 연동 회귀:
+
+```bash
+python -m pytest tests/test_naver_api_hub.py tests/test_settings_validation_http_policy.py -q
 ```
 
 ## 빌드
@@ -118,6 +165,8 @@ python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 - 탭 배지는 DB load의 unread count와 NewsTab 로컬 unread cache를 우선 사용해 불필요한 count refresh를 줄입니다.
 - 단일 탭 새로고침, 더 불러오기, 순차 새로고침은 모두 `fetch_news()`에서 API 자격증명을 중앙 검증한 뒤 worker를 생성합니다.
 - 탭 닫기/이름 변경은 기존 fetch worker 정리가 timeout되면 탭 상태 변경을 보류합니다.
+- API HTTP 오류는 Search API 평면 오류(`errorCode`/`errorMessage`)와 API Gateway 중첩 오류(`error.message`)를 `core.naver_api.parse_naver_api_error`로 통일 파싱합니다.
+- 401/403은 `auth_error`로 분류해 사용자에게 API HUB 키 확인을 안내합니다.
 
 ## 설정 Export/Import
 

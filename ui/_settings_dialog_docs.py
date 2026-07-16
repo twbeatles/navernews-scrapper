@@ -15,8 +15,9 @@ class _SettingsDialogDocsMixin:
             <h2 style="color:#007AFF;">빠른 시작</h2>
             <h3>API 키 설정</h3>
             <ul>
-                <li>네이버 개발자센터에서 뉴스 검색 API 앱을 등록합니다.</li>
-                <li>Client ID / Client Secret을 입력한 뒤 검증 버튼으로 확인합니다.</li>
+                <li>네이버 클라우드 플랫폼 콘솔에서 NAVER API HUB 이용을 신청하고, 검색(뉴스) API가 포함된 Application을 등록합니다.</li>
+                <li>발급된 Client ID / Client Secret을 입력한 뒤 검증 버튼으로 확인합니다.</li>
+                <li>기존 네이버 개발자센터 키는 사용할 수 없습니다. API HUB에서 새로 발급받아야 합니다.</li>
             </ul>
             <h3>탭 검색</h3>
             <ul>

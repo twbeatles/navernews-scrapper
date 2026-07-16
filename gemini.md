@@ -6,16 +6,20 @@
 
 - App: Naver News tab search/management desktop tool
 - Runtime: Python 3.14, PyQt6, SQLite, requests
+- News API: **NAVER API HUB** (not legacy Developers Center)
 - Entry point: `news_scraper_pro.py`
 - Bootstrap: `core.bootstrap.main()`
 - UI facade: `ui.main_window.MainApp`
 - DB facade: `core.database.DatabaseManager`
+- API helpers: `core.naver_api`
 - Packaging: `news_scraper_pro.spec` / PyInstaller onefile
+- Version: `core.constants.VERSION`
 
 ## Architecture
 
 ```text
 core/
+  naver_api.py             # API HUB URL, auth headers, error parsing
   database.py              # DatabaseManager composition root
   db_schema_support/       # schema and migration helpers
   db_queries_support/      # fetch/count/archive/search queries
@@ -37,6 +41,16 @@ tests/
 
 Root modules such as `database_manager.py`, `query_parser.py`, `workers.py`, and `styles.py` are compatibility wrappers.
 
+## NAVER API HUB
+
+- Endpoint: `GET https://naverapihub.apigw.ntruss.com/search/v1/news`
+- Headers: `X-NCP-APIGW-API-KEY-ID`, `X-NCP-APIGW-API-KEY`
+- Shared helpers live in `core/naver_api.py` and must be used by both `ApiWorker` and settings validation.
+- Do **not** restore legacy `openapi.naver.com` or `X-Naver-Client-*` headers.
+- Config still stores `client_id` / `client_secret` field names; values must be API HUB credentials.
+- Parse both Search flat errors and API Gateway nested `error` objects via `parse_naver_api_error`.
+- Map HTTP 401/403 to `auth_error` for UI messaging.
+
 ## Important Contracts
 
 - Query scope uses canonical fetch keys from `core.query_parser`.
@@ -53,6 +67,8 @@ Root modules such as `database_manager.py`, `query_parser.py`, `workers.py`, and
 
 | Change | Start Here |
 |---|---|
+| API endpoint/headers/errors | `core/naver_api.py`, `core/workers_support/api_worker.py` |
+| Settings API validation/UI copy | `ui/_settings_dialog_tasks.py`, `ui/_settings_dialog_content.py`, `ui/_settings_dialog_docs.py` |
 | Fetch/API behavior | `core/workers_support/api_worker.py` |
 | Upsert performance | `core/db_mutations_support/news_upsert.py` |
 | List/count semantics | `core/db_queries_support/fetch.py` |
@@ -76,6 +92,12 @@ For document/spec changes:
 python -m pytest tests/test_encoding_smoke.py tests/test_version_history_guard.py tests/test_spec_runtime_tmpdir.py -q
 ```
 
+For API HUB regression:
+
+```bash
+python -m pytest tests/test_naver_api_hub.py tests/test_settings_validation_http_policy.py -q
+```
+
 For packaged release checks:
 
 ```bash
@@ -88,3 +110,4 @@ python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 - Keep Markdown concise and current-state oriented.
 - Keep `news_scraper_pro.spec` focused on the actual dependency and packaging contract.
 - Preserve UTF-8 text files.
+- When bumping `VERSION`, add a matching `## v{VERSION}` section to `update_history.md`.
