@@ -1,0 +1,30 @@
+{
+  "name": "timeline",
+  "description": "Step 2: Get context around results. Params: anchor (observation ID) OR query (finds anchor automatically), depth_before, depth_after, project",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "anchor": {
+        "type": "number",
+        "description": "Observation ID to center the timeline around"
+      },
+      "query": {
+        "type": "string",
+        "description": "Query to find anchor automatically"
+      },
+      "depth_before": {
+        "type": "number",
+        "description": "Items before anchor (default 3)"
+      },
+      "depth_after": {
+        "type": "number",
+        "description": "Items after anchor (default 3)"
+      },
+      "project": {
+        "type": "string",
+        "description": "Filter by project name"
+      }
+    },
+    "additionalProperties": true
+  }
+}

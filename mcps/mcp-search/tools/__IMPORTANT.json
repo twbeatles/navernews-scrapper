@@ -1,0 +1,8 @@
+{
+  "name": "__IMPORTANT",
+  "description": "3-LAYER WORKFLOW (ALWAYS FOLLOW):\n1. search(query) → Get index with IDs (~50-100 tokens/result)\n2. timeline(anchor=ID) → Get context around interesting results\n3. get_observations([IDs]) → Fetch full details ONLY for filtered IDs\nNEVER fetch full details without filtering first. 10x token savings.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}

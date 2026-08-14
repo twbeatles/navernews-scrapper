@@ -114,13 +114,28 @@ class _FetchWorkerStartMixin:
             else:
                 start_idx = 101
             if start_idx > 1000:
-                QMessageBox.information(
+                reply = QMessageBox.question(
                     self,
-                    "알림",
-                    "네이버 검색 API는 최대 1,000건까지만 조회할 수 있습니다.",
+                    "API 조회 한도 알림",
+                    "네이버 검색 API는 최대 1,000건까지만 조회할 수 있습니다.\n\n"
+                    "페이징 커서를 초기화하고 처음(최신 기사)부터 다시 조회하시겠습니까?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
                 )
-                if is_sequential:
-                    self._on_sequential_fetch_done(keyword)
+                if reply == QMessageBox.StandardButton.Yes:
+                    reset_cursor = getattr(self, "reset_tab_fetch_cursor", None)
+                    if callable(reset_cursor):
+                        reset_cursor(keyword, notify=False)
+                    else:
+                        fetch_state.last_api_start_index = 0
+                        self._fetch_cursor_by_key.pop(fetch_key, None)
+                    if is_sequential:
+                        self._on_sequential_fetch_done(keyword)
+                    else:
+                        self.fetch_news(keyword, is_more=False)
+                else:
+                    if is_sequential:
+                        self._on_sequential_fetch_done(keyword)
                 return
 
         old_handle = self._worker_registry.get_active_handle(keyword)

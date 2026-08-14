@@ -1,0 +1,16 @@
+{
+  "name": "smart_outline",
+  "description": "Get structural outline of a file — shows all symbols (functions, classes, methods, types) with signatures but bodies folded. Much cheaper than reading the full file.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Path to the source file"
+      }
+    },
+    "required": [
+      "file_path"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "prime_corpus",
+  "description": "Prime a knowledge corpus — creates an AI session loaded with the corpus knowledge. Must be called before query_corpus.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the corpus to prime"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": true
+  }
+}

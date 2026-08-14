@@ -238,6 +238,8 @@ def main():
         instance_lock = QLockFile(INSTANCE_LOCK_FILE)
         instance_lock.setStaleLockTime(10000)
         if not instance_lock.tryLock(0):
+            retry_count = 0
+            max_retries = 3
             while True:
                 conflict_state = _resolve_single_instance_conflict(instance_lock)
                 logger.info("single_instance|status=%s", conflict_state)
@@ -248,12 +250,27 @@ def main():
                     logger.info("단일 인스턴스 락 복구 성공: stale lock 제거 후 실행 지속")
                     break
 
+                retry_count += 1
+                if retry_count > max_retries:
+                    logger.warning("단일 인스턴스 재시도 횟수 초과 (%d회): 앱 안전 종료", max_retries)
+                    limit_box = QMessageBox()
+                    limit_box.setIcon(QMessageBox.Icon.Warning)
+                    limit_box.setWindowTitle("실행 불가")
+                    limit_box.setText("인스턴스 잠금 해제에 반복 실패했습니다.")
+                    limit_box.setInformativeText(
+                        "작업 관리자에서 기존 프로세스가 실행 중인지 확인하거나,\n"
+                        "잠금 파일(.app_instance.lock)을 확인해 주세요."
+                    )
+                    limit_box.setStandardButtons(QMessageBox.StandardButton.Close)
+                    limit_box.exec()
+                    sys.exit(0)
+
                 message_box = QMessageBox()
                 message_box.setIcon(QMessageBox.Icon.Information)
                 message_box.setWindowTitle("이미 실행 중")
                 message_box.setText("뉴스 스크래퍼 Pro가 이미 실행 중이거나 잠금 파일이 남아 있습니다.")
                 message_box.setInformativeText(
-                    "기존 창 복원 요청에 실패했습니다.\n"
+                    f"기존 창 복원 요청에 실패했습니다. (재시도 {retry_count}/{max_retries})\n"
                     "잠금 파일 문제일 수 있습니다. 다시 시도할까요?"
                 )
                 message_box.setStandardButtons(

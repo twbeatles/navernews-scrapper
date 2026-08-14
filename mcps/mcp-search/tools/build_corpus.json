@@ -1,0 +1,53 @@
+{
+  "name": "build_corpus",
+  "description": "Build a knowledge corpus from filtered observations. Creates a queryable knowledge agent. Params: name (required), description, project, types (comma-separated), concepts (comma-separated), files (comma-separated), query, dateStart, dateEnd, limit",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Corpus name (used as filename)"
+      },
+      "description": {
+        "type": "string",
+        "description": "What this corpus is about"
+      },
+      "project": {
+        "type": "string",
+        "description": "Filter by project"
+      },
+      "types": {
+        "type": "string",
+        "description": "Comma-separated observation types: decision,bugfix,feature,refactor,discovery,change"
+      },
+      "concepts": {
+        "type": "string",
+        "description": "Comma-separated concepts to filter by"
+      },
+      "files": {
+        "type": "string",
+        "description": "Comma-separated file paths to filter by"
+      },
+      "query": {
+        "type": "string",
+        "description": "Semantic search query"
+      },
+      "dateStart": {
+        "type": "string",
+        "description": "Start date (ISO format)"
+      },
+      "dateEnd": {
+        "type": "string",
+        "description": "End date (ISO format)"
+      },
+      "limit": {
+        "type": "number",
+        "description": "Maximum observations (default 500)"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "smart_search",
+  "description": "Search codebase for symbols, functions, classes using tree-sitter AST parsing. Returns folded structural views with token counts. Use path parameter to scope the search.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search term — matches against symbol names, file names, and file content"
+      },
+      "path": {
+        "type": "string",
+        "description": "Root directory to search (default: current working directory)"
+      },
+      "max_results": {
+        "type": "number",
+        "description": "Maximum results to return (default: 20)"
+      },
+      "file_pattern": {
+        "type": "string",
+        "description": "Substring filter for file paths (e.g. \".ts\", \"src/services\")"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  }
+}

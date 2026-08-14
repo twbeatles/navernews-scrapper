@@ -2,6 +2,31 @@
 
 이 파일은 현재 릴리스에서 유지해야 할 변경 요약만 기록합니다. 과거 날짜별 누적 로그는 문서 본문에서 제거했으며, 필요하면 Git history와 이전 태그를 기준으로 확인합니다.
 
+## v32.7.7 (2026-08-14)
+
+### Resource Management & Reliability (PROJECT_AUDIT)
+
+- `ApiWorker`의 `requests.Session` 수명주기 관리를 강화하여 정상 완료/오류/취소 시 무조건 세션을 닫도록(`session.close()`) 보장했습니다.
+- 네이버 뉴스 검색 API 1,000건 페이징 한계 도달 시 사용자 안내 대화상자를 통해 페이징 커서를 1페이지로 즉시 초기화할 수 있는 UX를 구현했습니다.
+- 탭 컨텍스트 메뉴에 `⏮ 페이징 커서 초기화` 액션 및 `reset_tab_fetch_cursor` 메서드를 추가했습니다.
+- 단일 인스턴스 잠금 충돌 시 무한 루프 대신 최대 3회 재시도 제한 및 안전 종료 안내를 적용했습니다.
+- 클라우드 동기화 스냅샷 가져오기 시 30분 이상의 시간 오차를 감지하는 Clock Skew 경고 로직을 추가했습니다.
+
+### Features & Export
+
+- 기사 데이터 내보내기에 **JSON 형식(`*.json`)** 지원을 추가했습니다 (`export_items_to_json`, `export_scope_to_json`).
+- 대용량 데이터 JSON 내보내기를 백그라운드 워커에서 원자적으로 처리합니다.
+
+### Tests
+
+- `tests/test_api_worker_session_lifecycle.py` (신규): `ApiWorker` 세션 수명주기 및 정상/오류/비소유 세션 정리 검증.
+- `tests/test_json_export.py` (신규): 기사 목록 및 쿼리 스쿱의 JSON 파일 내보내기 검증.
+
+### Validation
+
+- `python -m pytest -q` => `393 passed`, 7 warnings, 5 subtests passed
+- `python -m pyright` => `0 errors, 0 warnings, 0 informations`
+
 ## v32.7.6 (2026-07-16)
 
 ### NAVER API HUB 이관

@@ -148,6 +148,34 @@ def export_items_to_markdown(
             except OSError:
                 pass
         raise
+def export_items_to_json(
+    items: List[Dict[str, Any]],
+    output_path: str,
+    keyword: str,
+) -> Dict[str, Any]:
+    directory = os.path.dirname(os.path.abspath(output_path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=".export_", suffix=".tmp", dir=directory)
+    payload = {
+        "keyword": keyword,
+        "exported_at": datetime.now().isoformat(),
+        "count": len(items),
+        "items": items,
+    }
+    try:
+        with os.fdopen(fd, "w", newline="\n", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, output_path)
+        return {"count": len(items), "path": output_path, "keyword": keyword, "format": "json"}
+    except Exception:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
 def export_scope_to_csv(
     context,
     db_manager,
@@ -309,6 +337,92 @@ def export_scope_to_markdown(
 
         os.replace(tmp_path, output_path)
         return {"count": written, "path": output_path, "keyword": keyword, "format": "markdown"}
+    except Exception:
+        close_batch_iter = getattr(batch_iter, "close", None)
+        if callable(close_batch_iter):
+            close_batch_iter()
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
+def export_scope_to_json(
+    context,
+    db_manager,
+    scope: DBQueryScope,
+    output_path: str,
+    keyword: str,
+    chunk_size: int = EXPORT_CHUNK_SIZE,
+) -> Dict[str, Any]:
+    if hasattr(db_manager, "iter_news_snapshot_batches"):
+        total_count, batch_iter = db_manager.iter_news_snapshot_batches(
+            scope,
+            chunk_size=max(1, int(chunk_size)),
+        )
+    else:
+        total_count = int(db_manager.count_news(**scope.count_kwargs()))
+        batch_iter = None
+    try:
+        context.report(current=0, total=total_count, message="JSON 준비 중...", payload={"stage": "count"})
+        context.check_cancelled()
+        if total_count <= 0:
+            raise ValueError("내보낼 뉴스가 없습니다.")
+    except Exception:
+        close_batch_iter = getattr(batch_iter, "close", None)
+        if callable(close_batch_iter):
+            close_batch_iter()
+        raise
+
+    directory = os.path.dirname(os.path.abspath(output_path)) or "."
+    os.makedirs(directory, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=".export_", suffix=".tmp", dir=directory)
+    all_items: List[Dict[str, Any]] = []
+
+    try:
+        if batch_iter is None:
+            def _fallback_iter():
+                offset = 0
+                while len(all_items) < total_count:
+                    rows = db_manager.fetch_news(
+                        limit=max(1, int(chunk_size)),
+                        offset=max(0, int(offset)),
+                        **scope.fetch_kwargs(),
+                    )
+                    if not rows:
+                        break
+                    offset += len(rows)
+                    yield rows
+
+            batch_iter = _fallback_iter()
+
+        for rows in batch_iter:
+            context.check_cancelled()
+            if not rows:
+                break
+            for item in rows:
+                context.check_cancelled()
+                all_items.append(item)
+            context.report(
+                current=len(all_items),
+                total=total_count,
+                message=f"JSON 수집 중... ({len(all_items)}/{total_count})",
+                payload={"stage": "write", "written": len(all_items), "path": output_path},
+            )
+
+        payload = {
+            "keyword": keyword,
+            "exported_at": datetime.now().isoformat(),
+            "count": len(all_items),
+            "items": all_items,
+        }
+        with os.fdopen(fd, "w", newline="\n", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+
+        os.replace(tmp_path, output_path)
+        return {"count": len(all_items), "path": output_path, "keyword": keyword, "format": "json"}
     except Exception:
         close_batch_iter = getattr(batch_iter, "close", None)
         if callable(close_batch_iter):

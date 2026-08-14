@@ -1,0 +1,41 @@
+{
+  "name": "fill_form",
+  "description": "한국 서식 문서의 빈칸을 채워서 새 문서로 출력합니다. hwpx-preserve를 사용하면 원본 서식(테두리, 폰트, 병합 등)을 100% 유지합니다.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "서식 템플릿 문서의 절대 경로 (HWP, HWPX, PDF, XLSX, DOCX)"
+      },
+      "fields": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "채울 필드 맵 (라벨 → 값). 예: {\"성명\": \"홍길동\", \"전화번호\": \"010-1234-5678\"}"
+      },
+      "output_format": {
+        "type": "string",
+        "enum": [
+          "markdown",
+          "hwpx",
+          "hwpx-preserve"
+        ],
+        "default": "hwpx-preserve",
+        "description": "출력 포맷: hwpx-preserve (원본 스타일 보존, HWPX 전용), hwpx (새 HWPX 생성), markdown"
+      },
+      "output_path": {
+        "type": "string",
+        "description": "출력 파일 저장 경로 (선택). 지정 시 파일로 저장, 미지정 시 텍스트로 반환"
+      }
+    },
+    "required": [
+      "file_path",
+      "fields"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

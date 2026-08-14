@@ -36,6 +36,7 @@ Thumbs.db
 # Logs and runtime noise
 *.log
 logs/
+crash.log
 crash_log.txt
 
 # Local database and config data
@@ -50,12 +51,16 @@ keyword_groups.json
 pending_restore.json
 pending_restore.json.applied
 news_scraper_pro.lock
+.app_instance.lock
+.*.lock
+*.lock
 
 # Backups and temporary files
 backups/
 news_scraper_sync_*.zip
 .news_scraper_sync_*.zip.tmp
 .invalid/
+*.reason.txt
 *.bak
 *.backup
 *.tmp

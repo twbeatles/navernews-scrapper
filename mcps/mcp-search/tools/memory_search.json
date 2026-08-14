@@ -1,0 +1,23 @@
+{
+  "name": "memory_search",
+  "description": "Compatibility alias for observation_search. Same FTS path; same /v1/search REST endpoint.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string"
+      },
+      "query": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "projectId",
+      "query"
+    ],
+    "additionalProperties": true
+  }
+}

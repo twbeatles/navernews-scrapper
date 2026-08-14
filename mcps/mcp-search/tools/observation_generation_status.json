@@ -1,0 +1,17 @@
+{
+  "name": "observation_generation_status",
+  "description": "Look up the status of an observation generation job by id. Calls /v1/jobs/:id. Server-beta runtime only. Returns the same payload as REST.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "jobId": {
+        "type": "string",
+        "description": "Generation job id (required)"
+      }
+    },
+    "required": [
+      "jobId"
+    ],
+    "additionalProperties": false
+  }
+}

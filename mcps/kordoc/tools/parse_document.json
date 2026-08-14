@@ -1,0 +1,19 @@
+{
+  "name": "parse_document",
+  "description": "한국 문서 파일(HWP, HWPX, PDF, XLSX, DOCX)을 마크다운으로 변환합니다. 파일 경로를 입력하면 포맷을 자동 감지하여 텍스트를 추출합니다.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "파싱할 문서 파일의 절대 경로 (HWP, HWPX, PDF, XLSX, DOCX)"
+      }
+    },
+    "required": [
+      "file_path"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

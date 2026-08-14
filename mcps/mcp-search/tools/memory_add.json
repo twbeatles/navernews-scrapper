@@ -1,0 +1,34 @@
+{
+  "name": "memory_add",
+  "description": "Compatibility alias for observation_add. Same behavior; same schema modulo the legacy field names.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "content": {
+        "type": "string"
+      },
+      "narrative": {
+        "type": "string",
+        "description": "Legacy alias for content; mapped to content if content is missing"
+      },
+      "title": {
+        "type": "string",
+        "description": "Legacy field; appended to metadata.title"
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "projectId"
+    ],
+    "additionalProperties": true
+  }
+}

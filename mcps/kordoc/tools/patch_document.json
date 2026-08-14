@@ -1,0 +1,31 @@
+{
+  "name": "patch_document",
+  "description": "원본 HWPX/HWP의 서식(글꼴·표·도장칸·이미지)을 1바이트도 건드리지 않고, 편집된 마크다운의 바뀐 텍스트만 제자리 치환해 새 문서로 출력합니다. parse_document로 얻은 마크다운을 수정해 넘기세요 — 양식 빈칸 채우기·문구 수정에 적합하며 한컴 한글에서 변조 경고 없이 열립니다. (블록 추가/삭제·표 구조 변경은 미지원, 미적용 항목은 결과에 보고)",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "원본 문서의 절대 경로 (HWPX 또는 HWP 5.x)"
+      },
+      "edited_markdown": {
+        "type": "string",
+        "minLength": 1,
+        "description": "parse_document 출력 마크다운을 편집한 전체 마크다운. 바뀐 문단/셀 텍스트만 반영하고 블록 수·순서는 원본과 같게 유지하세요"
+      },
+      "output_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "출력 파일 저장 절대 경로 (원본과 같은 확장자: .hwpx 또는 .hwp)"
+      }
+    },
+    "required": [
+      "file_path",
+      "edited_markdown",
+      "output_path"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

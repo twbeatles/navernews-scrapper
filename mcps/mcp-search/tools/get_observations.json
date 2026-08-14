@@ -1,0 +1,20 @@
+{
+  "name": "get_observations",
+  "description": "Step 3: Fetch full details for filtered IDs. Params: ids (array of observation IDs, required), orderBy, limit, project",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "ids": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "description": "Array of observation IDs to fetch (required)"
+      }
+    },
+    "required": [
+      "ids"
+    ],
+    "additionalProperties": true
+  }
+}

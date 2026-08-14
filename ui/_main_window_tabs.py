@@ -486,6 +486,7 @@ class _MainWindowTabsMixin:
             group_menu.setDisabled(True)
 
         menu.addSeparator()
+        act_reset_cursor = self._add_menu_action(menu, "⏮ 페이징 커서 초기화")
         act_close = self._add_menu_action(menu, "❌ 탭 닫기")
 
         action = menu.exec(tab_bar.mapToGlobal(pos))
@@ -494,8 +495,28 @@ class _MainWindowTabsMixin:
             self.fetch_news(keyword)
         elif action == act_rename:
             self.rename_tab(idx)
+        elif action == act_reset_cursor:
+            self.reset_tab_fetch_cursor(keyword)
         elif action == act_close:
             self.close_tab(idx)
+
+    def reset_tab_fetch_cursor(self: MainApp, keyword: str, *, notify: bool = True) -> None:
+        """탭의 API 페이징 커서를 1로 초기화한다."""
+        normalized_keyword = str(keyword or "").strip()
+        if not normalized_keyword:
+            return
+        fetch_key = self._canonical_fetch_key_for_keyword(normalized_keyword)
+        fetch_state = self._tab_fetch_state.get(normalized_keyword)
+        if fetch_state is not None:
+            fetch_state.last_api_start_index = 0
+        if fetch_key:
+            self._fetch_cursor_by_key.pop(fetch_key, None)
+        located_tab = self._find_news_tab(normalized_keyword)
+        if located_tab is not None:
+            _tab_index, tab_widget = located_tab
+            self.sync_tab_load_more_state(normalized_keyword)
+        if notify:
+            self.show_success_toast(f"'{normalized_keyword}' 페이징 커서를 처음(1페이지)으로 초기화했습니다.")
 
     def set_tab_refresh_policy(self: MainApp, keyword: str, policy: str) -> None:
         allowed = {"inherit", "off", "10", "30", "60", "120", "360"}

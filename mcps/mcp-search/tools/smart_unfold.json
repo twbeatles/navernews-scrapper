@@ -1,0 +1,21 @@
+{
+  "name": "smart_unfold",
+  "description": "Expand a specific symbol (function, class, method) from a file. Returns the full source code of just that symbol. Use after smart_search or smart_outline to read specific code.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Path to the source file"
+      },
+      "symbol_name": {
+        "type": "string",
+        "description": "Name of the symbol to unfold (function, class, method, etc.)"
+      }
+    },
+    "required": [
+      "file_path",
+      "symbol_name"
+    ]
+  }
+}

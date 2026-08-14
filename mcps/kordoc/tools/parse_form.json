@@ -1,0 +1,19 @@
+{
+  "name": "parse_form",
+  "description": "한국 서식 문서에서 레이블-값 쌍을 구조화된 JSON으로 추출합니다. 양식/서식 문서에 최적화.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "서식 문서 파일의 절대 경로"
+      }
+    },
+    "required": [
+      "file_path"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "memory_context",
+  "description": "Compatibility alias for observation_context. Same /v1/context REST endpoint.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string"
+      },
+      "query": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "projectId",
+      "query"
+    ],
+    "additionalProperties": true
+  }
+}

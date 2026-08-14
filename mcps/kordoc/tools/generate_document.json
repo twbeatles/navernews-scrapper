@@ -1,0 +1,55 @@
+{
+  "name": "generate_document",
+  "description": "마크다운을 HWPX 한글 문서로 생성합니다. GFM 표(| 헤더 | … |)·헤딩·리스트·볼드를 한글 문서 요소로 변환하며, 공문서 프리셋 지정 시 행정 표준 서식(항목부호 8단계·공식 여백·명조 15pt)으로 렌더링합니다. 활용: 평문 문장을 표로 구조화해 새 한글파일로 만들거나, parse_document로 읽은 내용을 편집해 다시 HWPX로 출력. (원본 서식을 보존하며 일부 텍스트/표만 제자리 수정하려면 patch_document 사용)",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "markdown": {
+        "type": "string",
+        "minLength": 1,
+        "description": "HWPX로 변환할 마크다운 전문. 표는 GFM 문법 사용 (예: '| 이름 | 부서 |\\n| --- | --- |\\n| 홍길동 | 기획팀 |')"
+      },
+      "output_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "출력 HWPX 파일의 절대 경로 (.hwpx 권장)"
+      },
+      "preset": {
+        "type": "string",
+        "enum": [
+          "기안문",
+          "보고서",
+          "계획서",
+          "통지",
+          "회의록",
+          "official",
+          "report",
+          "plan",
+          "notice",
+          "minutes"
+        ],
+        "description": "공문서 프리셋 — 지정 시 한국 행정 공문서 표준 서식 적용. 미지정 시 범용 마크다운 변환"
+      },
+      "font": {
+        "type": "string",
+        "enum": [
+          "myeongjo",
+          "gothic"
+        ],
+        "description": "본문 글꼴(공문서 모드): myeongjo=함초롬바탕(명조), gothic=맑은 고딕"
+      },
+      "body_pt": {
+        "type": "integer",
+        "minimum": 6,
+        "maximum": 40,
+        "description": "본문 글자 크기(pt, 공문서 모드). 기본 15"
+      }
+    },
+    "required": [
+      "markdown",
+      "output_path"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

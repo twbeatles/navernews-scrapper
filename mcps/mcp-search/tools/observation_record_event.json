@@ -1,0 +1,50 @@
+{
+  "name": "observation_record_event",
+  "description": "Record an agent event into server-beta. Calls /v1/events — server inserts the event row, the outbox row, and enqueues a generation job atomically. Server-beta runtime only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string"
+      },
+      "eventType": {
+        "type": "string",
+        "description": "Event type (required), e.g. PostToolUse, UserPromptSubmit"
+      },
+      "sourceType": {
+        "type": "string",
+        "enum": [
+          "hook",
+          "worker",
+          "provider",
+          "server",
+          "api"
+        ]
+      },
+      "serverSessionId": {
+        "type": "string"
+      },
+      "contentSessionId": {
+        "type": "string"
+      },
+      "memorySessionId": {
+        "type": "string"
+      },
+      "payload": {
+        "description": "Event payload (any JSON value)"
+      },
+      "occurredAtEpoch": {
+        "type": "number",
+        "description": "Unix epoch millis (defaults to now)"
+      },
+      "generate": {
+        "type": "boolean",
+        "description": "If false, skip generation job (default: true)"
+      }
+    },
+    "required": [
+      "eventType"
+    ],
+    "additionalProperties": false
+  }
+}

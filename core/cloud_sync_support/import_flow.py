@@ -1,8 +1,8 @@
 
-from __future__ import annotations
-
+import logging
 import os
 import tempfile
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, Sequence
 
 from core.cloud_sync_support.models import CloudSyncError
@@ -15,6 +15,9 @@ from core.cloud_sync_support.snapshot_io import (
     quarantine_invalid_snapshot,
     read_snapshot_manifest,
 )
+
+logger = logging.getLogger(__name__)
+MAX_CLOCK_SKEW_SECONDS = 1800  # 30분 초과 시 시계 오차 경고
 
 
 def _snapshot_import_error(zip_path: str, exc: BaseException) -> str:
@@ -75,12 +78,33 @@ def import_cloud_snapshot(
     manifest = read_snapshot_manifest(zip_path)
     snapshot_id = str(manifest.get("snapshot_id", "") or "").strip()
     source_machine_id = str(manifest.get("machine_id", "") or "").strip()
+    created_at_raw = str(manifest.get("created_at", "") or "").strip()
+
+    clock_skew_seconds: float = 0.0
+    clock_skew_warning: bool = False
+    if created_at_raw:
+        try:
+            snapshot_dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+            now_dt = datetime.now(timezone.utc)
+            clock_skew_seconds = abs((now_dt - snapshot_dt).total_seconds())
+            if clock_skew_seconds > MAX_CLOCK_SKEW_SECONDS:
+                clock_skew_warning = True
+                logger.warning(
+                    "Cloud sync clock skew detected: snapshot=%s, skew_seconds=%.1f",
+                    snapshot_id,
+                    clock_skew_seconds,
+                )
+        except Exception as exc:
+            logger.debug("Failed to parse snapshot created_at for clock skew: %s", exc)
+
     if snapshot_id in db_manager.get_cloud_sync_seen_snapshot_ids():
         return {
             "snapshot_id": snapshot_id,
             "merged": False,
             "skipped": True,
             "reason": "already_seen",
+            "clock_skew_warning": clock_skew_warning,
+            "clock_skew_seconds": clock_skew_seconds,
         }
     with tempfile.TemporaryDirectory(prefix="news_cloud_import_") as staging_dir:
         extracted = extract_snapshot(zip_path, staging_dir)
@@ -92,6 +116,8 @@ def import_cloud_snapshot(
         )
     result["snapshot_path"] = zip_path
     result["source_machine_id"] = source_machine_id
+    result["clock_skew_warning"] = clock_skew_warning
+    result["clock_skew_seconds"] = clock_skew_seconds
     return result
 
 

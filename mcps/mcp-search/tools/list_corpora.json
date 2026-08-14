@@ -1,0 +1,9 @@
+{
+  "name": "list_corpora",
+  "description": "List all knowledge corpora with their stats and priming status",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": true
+  }
+}

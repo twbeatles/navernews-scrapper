@@ -1,0 +1,22 @@
+{
+  "name": "query_corpus",
+  "description": "Ask a question to a primed knowledge corpus. The corpus must be primed first with prime_corpus.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the corpus to query"
+      },
+      "question": {
+        "type": "string",
+        "description": "The question to ask"
+      }
+    },
+    "required": [
+      "name",
+      "question"
+    ],
+    "additionalProperties": true
+  }
+}

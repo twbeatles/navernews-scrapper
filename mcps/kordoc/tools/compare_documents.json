@@ -1,0 +1,25 @@
+{
+  "name": "compare_documents",
+  "description": "두 한국 문서 파일을 비교하여 추가/삭제/변경된 블록을 표시합니다. 신구대조표 생성에 활용됩니다. 크로스 포맷(HWP↔HWPX) 비교 가능.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path_a": {
+        "type": "string",
+        "minLength": 1,
+        "description": "비교 원본 문서의 절대 경로"
+      },
+      "file_path_b": {
+        "type": "string",
+        "minLength": 1,
+        "description": "비교 대상 문서의 절대 경로"
+      }
+    },
+    "required": [
+      "file_path_a",
+      "file_path_b"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

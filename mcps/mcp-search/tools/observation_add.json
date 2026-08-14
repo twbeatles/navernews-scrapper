@@ -1,0 +1,34 @@
+{
+  "name": "observation_add",
+  "description": "Insert a manual observation directly into server-beta storage. Calls /v1/memories — does NOT enqueue generation. Server-beta runtime only. Params: content (required), projectId (optional, falls back to settings), serverSessionId, kind, metadata.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "description": "Project id (falls back to CLAUDE_MEM_SERVER_BETA_PROJECT_ID)"
+      },
+      "serverSessionId": {
+        "type": "string",
+        "description": "Optional server_session_id to attach the observation to"
+      },
+      "kind": {
+        "type": "string",
+        "description": "Observation kind (default: manual)"
+      },
+      "content": {
+        "type": "string",
+        "description": "Observation content (required)"
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Free-form metadata object",
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "content"
+    ],
+    "additionalProperties": false
+  }
+}

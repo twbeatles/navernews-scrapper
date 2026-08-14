@@ -1,0 +1,25 @@
+{
+  "name": "parse_pages",
+  "description": "문서의 특정 페이지/섹션 범위만 파싱합니다. PDF는 정확한 페이지, HWP/HWPX는 섹션 단위 근사치입니다.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "minLength": 1,
+        "description": "파싱할 문서 파일의 절대 경로"
+      },
+      "pages": {
+        "type": "string",
+        "minLength": 1,
+        "description": "페이지 범위 (예: '1-3', '1,3,5-7')"
+      }
+    },
+    "required": [
+      "file_path",
+      "pages"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "observation_context",
+  "description": "Get top-N relevant observations for context injection. Returns matched observations AND a pre-joined context string suitable for prompt injection. Calls /v1/context. Server-beta runtime only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string"
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query (required)"
+      },
+      "limit": {
+        "type": "number",
+        "description": "Max observations (default 10, max 50)"
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "additionalProperties": false
+  }
+}

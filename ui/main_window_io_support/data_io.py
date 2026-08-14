@@ -49,8 +49,10 @@ EXPORT_CHUNK_SIZE = 500
 from ui.main_window_io_support.exports import (
     _dialogs_for,
     export_items_to_csv,
+    export_items_to_json,
     export_items_to_markdown,
     export_scope_to_csv,
+    export_scope_to_json,
     export_scope_to_markdown,
     import_bookmarks_notes_from_csv,
 )
@@ -119,11 +121,17 @@ class _MainWindowDataIOMixin:
             self,
             "데이터 내보내기",
             default_name,
-            "CSV Files (*.csv);;Markdown Digest (*.md);;All Files (*)",
+            "CSV Files (*.csv);;Markdown Digest (*.md);;JSON Files (*.json);;All Files (*)",
         )
         if not fname:
             return
-        export_format = "markdown" if str(fname).lower().endswith(".md") else "csv"
+        fname_lower = str(fname).lower()
+        if fname_lower.endswith(".json"):
+            export_format = "json"
+        elif fname_lower.endswith(".md"):
+            export_format = "markdown"
+        else:
+            export_format = "csv"
 
         scope_builder = getattr(cur_widget, "_build_query_scope", None)
         if callable(scope_builder):
@@ -141,7 +149,9 @@ class _MainWindowDataIOMixin:
             return
 
         try:
-            if export_format == "markdown":
+            if export_format == "json":
+                result = export_items_to_json(visible_items, fname, keyword)
+            elif export_format == "markdown":
                 result = export_items_to_markdown(
                     visible_items,
                     fname,
@@ -171,11 +181,21 @@ class _MainWindowDataIOMixin:
         self.progress.setValue(0)
         self.btn_save.setText("⏹ 내보내기 취소")
         self.btn_save.setEnabled(True)
-        export_format = "markdown" if str(export_format).lower() == "markdown" else "csv"
-        label = "Markdown" if export_format == "markdown" else "CSV"
+        fmt_lower = str(export_format).lower()
+        if fmt_lower == "json":
+            export_format = "json"
+            label = "JSON"
+            job_fn = export_scope_to_json
+        elif fmt_lower == "markdown":
+            export_format = "markdown"
+            label = "Markdown"
+            job_fn = export_scope_to_markdown
+        else:
+            export_format = "csv"
+            label = "CSV"
+            job_fn = export_scope_to_csv
         self._status_bar().showMessage(f"{label} 내보내기를 시작합니다...")
 
-        job_fn = export_scope_to_markdown if export_format == "markdown" else export_scope_to_csv
         job_args = (
             self._require_db(),
             scope,
@@ -233,8 +253,13 @@ class _MainWindowDataIOMixin:
         target_path = str(result.get("path", "") or self._export_target_path)
         self._reset_export_ui()
         self.show_success_toast(f"총 {exported_count}개 항목을 저장했습니다.")
-        fmt = str(result.get("format", "csv") or "csv")
-        label = "Markdown" if fmt == "markdown" else "CSV"
+        fmt = str(result.get("format", "csv") or "csv").lower()
+        if fmt == "json":
+            label = "JSON"
+        elif fmt == "markdown":
+            label = "Markdown"
+        else:
+            label = "CSV"
         self._status_bar().showMessage(f"{label} 내보내기 완료 ({exported_count}개)", 4000)
         _dialogs_for(self).information(self, "완료", f"파일이 저장되었습니다:\n{target_path}")
     def _on_export_error(self: MainApp, error_msg: str) -> None:

@@ -1,0 +1,17 @@
+{
+  "name": "reprime_corpus",
+  "description": "Create a fresh knowledge agent session for a corpus, clearing prior Q&A context. Use when conversation has drifted or after rebuilding.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the corpus to reprime"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": true
+  }
+}

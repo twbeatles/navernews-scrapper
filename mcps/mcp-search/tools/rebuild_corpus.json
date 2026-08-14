@@ -1,0 +1,17 @@
+{
+  "name": "rebuild_corpus",
+  "description": "Rebuild a knowledge corpus from its stored filter — re-runs the search to refresh with new observations. Does not re-prime the session.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the corpus to rebuild"
+      }
+    },
+    "required": [
+      "name"
+    ],
+    "additionalProperties": true
+  }
+}
