@@ -1,5 +1,11 @@
 # Update History
 
+## v32.7.9 (2026-08-16)
+
+### Update Check Feedback Fix
+
+- Fixed the GitHub Release update button passing Qt's `clicked(bool)` value as the `interactive` argument. Manual checks now always show progress and a latest-version, update, or error message.
+
 이 파일은 현재 릴리스에서 유지해야 할 변경 요약만 기록합니다. 과거 날짜별 누적 로그는 문서 본문에서 제거했으며, 필요하면 Git history와 이전 태그를 기준으로 확인합니다.
 
 ## v32.7.8 (2026-08-16)

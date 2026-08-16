@@ -155,7 +155,7 @@ class _MainWindowSetupShellMixin:
         self.action_rules.triggered.connect(self.show_automation_rules)
         self.action_aliases.triggered.connect(self.show_publisher_aliases)
         self.btn_help.clicked.connect(self.show_help)
-        self.btn_update.clicked.connect(self.check_for_updates)
+        self.btn_update.clicked.connect(self.on_update_button_clicked)
         self.btn_backup.clicked.connect(self.show_backup_dialog)
         self.btn_add.clicked.connect(self.add_tab_dialog)
         self.btn_save.clicked.connect(self.export_data)

@@ -100,3 +100,17 @@ def test_update_shutdown_suppresses_late_worker_result():
     dummy._emit_checked("after-close", None, False)
 
     assert received == ["before-close"]
+
+
+def test_update_button_click_always_requests_interactive_feedback():
+    class DummyUpdate(_MainWindowUpdateMixin):
+        def __init__(self):
+            self.calls: list[bool] = []
+
+        def check_for_updates(self, interactive: bool = True) -> None:
+            self.calls.append(interactive)
+
+    dummy = DummyUpdate()
+    dummy.on_update_button_clicked(False)
+
+    assert dummy.calls == [True]

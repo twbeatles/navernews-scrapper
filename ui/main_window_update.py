@@ -56,6 +56,8 @@ class _MainWindowUpdateMixin:
                 self._toast("이미 업데이트를 확인하고 있습니다.")
             return
         self._update_busy = True
+        if interactive:
+            self._status().showMessage("GitHub 릴리스 업데이트를 확인 중...", 0)
 
         def work() -> None:
             try:
@@ -70,6 +72,10 @@ class _MainWindowUpdateMixin:
                 self._emit_checked(None, exc, interactive)
 
         threading.Thread(target=work, name="UpdateCheckWorker", daemon=True).start()
+
+    def on_update_button_clicked(self, _checked: bool = False) -> None:
+        """Run an interactive check; QPushButton.clicked supplies a bool argument."""
+        self.check_for_updates(interactive=True)
 
     def _on_update_checked(self, manifest: object, error: object, interactive: bool) -> None:
         self._update_busy = False
