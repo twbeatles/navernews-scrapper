@@ -1,0 +1,10 @@
+{
+  "payload": {
+    "artifact_url": "https://github.com/twbeatles/navernews-tabsearch/releases/download/v32.7.8/NewsScraperPro_Safe.exe",
+    "expires_at": "2027-08-16T13:31:19Z",
+    "sha256": "1545978ff42fbbfb9c213abb79d56e5e0033d5a64ab9745a99b2e5d9cbdf9175",
+    "size": 50547351,
+    "version": "32.7.8"
+  },
+  "signature": "oI4PKHKtlo9Dgf3i5Dfp6/XrZArCfGsrrf9lgPWa3Szblfm9Me+CkHtuIdP0v4coU4XGLkPn4zrDt7u0tADABg=="
+}
