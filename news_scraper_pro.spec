@@ -33,6 +33,8 @@ hiddenimports = [
     'requests',
     'email.utils',
     'charset_normalizer',
+    'cryptography',
+    'cryptography.hazmat.primitives.asymmetric.ed25519',
 ]
 hiddenimports += collect_submodules('requests')
 hiddenimports += collect_submodules(

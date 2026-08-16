@@ -38,8 +38,24 @@ ICON_FILE = "news_icon.ico"
 ICON_PNG = "news_icon.png"
 APP_NAME = "뉴스 스크래퍼 Pro"
 APP_USER_MODEL_ID = "Twbeatles.NaverNewsScraperPro"
-VERSION = "32.7.7"
+VERSION = "32.7.8"
 PENDING_RESTORE_FILE = RUNTIME_PATHS.pending_restore_file
+
+# GitHub release update channel.  The private half of this Ed25519 key is kept
+# outside the repository and is only used by scripts/build_update_manifest.py.
+UPDATE_MANIFEST_URL = os.environ.get(
+    "NEWS_SCRAPER_UPDATE_MANIFEST_URL",
+    "https://raw.githubusercontent.com/twbeatles/navernews-tabsearch/main/updates/latest.json",
+)
+UPDATE_PUBLIC_KEY_B64 = os.environ.get(
+    "NEWS_SCRAPER_UPDATE_PUBLIC_KEY_B64",
+    "5wksVeeIHiXbyvv1DNVQZafIJZ/h8Nu9AZ8d3xrAdxE=",
+)
+UPDATE_RELEASES_URL = "https://github.com/twbeatles/navernews-tabsearch/releases/latest"
+UPDATE_MANIFEST_MAX_BYTES = 256 * 1024
+UPDATE_ARTIFACT_MAX_BYTES = 500 * 1024 * 1024
+UPDATE_REQUEST_TIMEOUT_SECONDS = 20
+UPDATE_BACKUP_KEEP_COUNT = 2
 
 __all__ = [
     "APP_DATA_NAME",
@@ -70,6 +86,13 @@ __all__ = [
     "RUNTIME_PATHS",
     "RuntimePaths",
     "VERSION",
+    "UPDATE_ARTIFACT_MAX_BYTES",
+    "UPDATE_BACKUP_KEEP_COUNT",
+    "UPDATE_MANIFEST_MAX_BYTES",
+    "UPDATE_MANIFEST_URL",
+    "UPDATE_PUBLIC_KEY_B64",
+    "UPDATE_RELEASES_URL",
+    "UPDATE_REQUEST_TIMEOUT_SECONDS",
     "get_app_dir",
     "get_data_dir",
     "get_runtime_paths",

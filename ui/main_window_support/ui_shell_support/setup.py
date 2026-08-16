@@ -104,9 +104,14 @@ class _MainWindowSetupShellMixin:
         self.btn_help.setObjectName("IconButton")
         self.btn_help.setToolTip("사용 방법 및 도움말 (F1)")
 
+        self.btn_update = QPushButton("⬆")
+        self.btn_update.setObjectName("IconButton")
+        self.btn_update.setToolTip("GitHub 릴리스 업데이트 확인")
+
         toolbar.addWidget(self.btn_setting)
         toolbar.addWidget(self.btn_backup)
         toolbar.addWidget(self.btn_help)
+        toolbar.addWidget(self.btn_update)
 
         toolbar_sep = QFrame()
         toolbar_sep.setFrameShape(QFrame.Shape.VLine)
@@ -150,6 +155,7 @@ class _MainWindowSetupShellMixin:
         self.action_rules.triggered.connect(self.show_automation_rules)
         self.action_aliases.triggered.connect(self.show_publisher_aliases)
         self.btn_help.clicked.connect(self.show_help)
+        self.btn_update.clicked.connect(self.check_for_updates)
         self.btn_backup.clicked.connect(self.show_backup_dialog)
         self.btn_add.clicked.connect(self.add_tab_dialog)
         self.btn_save.clicked.connect(self.export_data)

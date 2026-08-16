@@ -2,6 +2,21 @@
 
 이 파일은 현재 릴리스에서 유지해야 할 변경 요약만 기록합니다. 과거 날짜별 누적 로그는 문서 본문에서 제거했으며, 필요하면 Git history와 이전 태그를 기준으로 확인합니다.
 
+## v32.7.8 (2026-08-16)
+
+### GitHub Release 자동 업데이트
+
+- GitHub Release의 서명된 매니페스트를 검증해 업데이트를 확인하고, SHA-256·파일 크기 검증 뒤 안전하게 설치합니다.
+- 설치 전 기존 종료 경로로 worker·DB·설정을 정리하며, 별도 helper가 실행 파일을 교체하고 smoke 점검 실패 시 이전 버전으로 복구합니다.
+- 설치 성공/실패/복구 결과는 다음 실행에서 안내하고, 오래된 staging/helper 파일은 정리합니다.
+- 태그 기반 GitHub Actions workflow와 `NEWS_SCRAPER_UPDATE_PRIVATE_KEY_B64` repository secret을 통해 Release와 매니페스트 발행을 자동화합니다.
+
+### Validation
+
+- `python -m pytest -q` => `404 passed`, 7 warnings, 5 subtests passed
+- `python -m pyright` => `0 errors, 0 warnings, 0 informations`
+- `python -m PyInstaller --noconfirm --clean news_scraper_pro.spec` => 성공
+
 ## v32.7.7 (2026-08-14)
 
 ### Resource Management & Reliability (PROJECT_AUDIT)

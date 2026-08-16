@@ -40,6 +40,7 @@ from ui._main_window_fetch import _MainWindowFetchMixin
 from ui._main_window_settings_io import _MainWindowSettingsIOMixin
 from ui._main_window_tabs import _MainWindowTabsMixin
 from ui._main_window_tray import _MainWindowTrayMixin
+from ui.main_window_update import _MainWindowUpdateMixin
 from ui.main_window_support import (
     TabFetchState,
     _MainWindowBaseMixin,
@@ -95,6 +96,7 @@ class MainApp(
     _MainWindowSettingsIOMixin,
     _MainWindowTrayMixin,
     _MainWindowAnalysisMixin,
+    _MainWindowUpdateMixin,
     _MainWindowBaseMixin,
     _MainWindowConfigMixin,
     _MainWindowUIShellMixin,
@@ -214,6 +216,7 @@ class MainApp(
             self.set_application_icon()
 
             self.load_config()
+            self.init_update_support()
             self.init_ui()
             self._connect_system_theme_change()
             self.setup_shortcuts()
@@ -237,6 +240,7 @@ class MainApp(
 
             QTimer.singleShot(500, self._check_first_run)
             QTimer.singleShot(600, self._show_startup_health_notices)
+            QTimer.singleShot(5000, lambda: self.check_for_updates(interactive=False))
 
             if os.path.exists(self.runtime_paths.config_file):
                 QTimer.singleShot(

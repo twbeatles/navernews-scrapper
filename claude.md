@@ -143,16 +143,16 @@ python -m PyInstaller --noconfirm --clean news_scraper_pro.spec
 - **프로젝트**: `navernews-tabsearch`
 - **Spec Kit 초기화**: `.specify/ 있음`
 - **에이전트 스킬**: Grok=True, Claude=True, Codex/Agy(.agents)=True
-- **활성 기능 디렉터리**: `specs/001-news-tabsearch-user-readme` (포인터: `.specify/feature.json`)
-- **기능 제목**: 네이버 뉴스 탭 검색 · 사용자 안내
-- **산출물**: spec=`yes`, plan=`True`, research/data-model/quickstart=`True`, tasks=`False`, converge=`False`
+- **활성 기능 디렉터리**: `specs/002-github-release-updates` (포인터: `.specify/feature.json`)
+- **기능 제목**: GitHub Release 기반 서명 자동 업데이트
+- **산출물**: spec=`yes`, plan=`True`, tasks=`True`, converge=`False`
 
 ### 에이전트가 먼저 읽을 파일
 
-1. `specs/001-news-tabsearch-user-readme/spec.md` — 무엇을/왜 (사용자 스토리, FR, 성공 기준)
-2. `specs/001-news-tabsearch-user-readme/plan.md` — 기술 컨텍스트·구조 결정
-3. `specs/001-news-tabsearch-user-readme/tasks.md` — 실행 가능 작업 목록 (`[x]`=이미 있음, `[ ]`=잔여)
-4. `specs/001-news-tabsearch-user-readme/research.md`, `data-model.md`, `quickstart.md`, `contracts/` — 설계 보조
+1. `specs/002-github-release-updates/spec.md` — 무엇을/왜 (사용자 스토리, FR, 성공 기준)
+2. `specs/002-github-release-updates/plan.md` — 기술 컨텍스트·구조 결정
+3. `specs/002-github-release-updates/tasks.md` — 실행 가능 작업 목록 (`[x]`=이미 있음, `[ ]`=잔여)
+4. `specs/002-github-release-updates/` — 설계 보조
 5. `.specify/feature.json` — 현재 활성 feature path
 6. `.specify/memory/constitution.md` — 원칙(템플릿이면 advisory)
 
