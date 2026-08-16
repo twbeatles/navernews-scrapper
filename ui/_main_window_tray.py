@@ -287,6 +287,9 @@ class _MainWindowTrayMixin:
 
         try:
             self._shutdown_in_progress = True
+            shutdown_update_support = getattr(self, "shutdown_update_support", None)
+            if callable(shutdown_update_support):
+                shutdown_update_support()
             defer_db_close = False
             if hasattr(self, "timer") and self.timer:
                 self.timer.stop()

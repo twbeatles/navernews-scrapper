@@ -136,4 +136,10 @@ __all__ = [
 
 
 if __name__ == '__main__':
-    main()
+    from core.update_installer import handle_update_helper_args
+
+    update_exit_code = handle_update_helper_args()
+    if update_exit_code is None:
+        main()
+    else:
+        raise SystemExit(update_exit_code)

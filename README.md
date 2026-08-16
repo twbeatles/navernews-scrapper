@@ -57,7 +57,7 @@
 - 소스에서 실행하는 경우:
 
 ```bash
-pip install PyQt6 requests
+pip install PyQt6 requests cryptography
 python news_scraper_pro.py
 ```
 
@@ -190,3 +190,19 @@ A. 단일 인스턴스로 동작합니다. 이미 실행 중이면 새 창 대�
 ## 라이선스
 
 MIT License
+
+---
+
+## GitHub Release 업데이트
+
+Windows 배포판에서는 도구막대의 `⬆` 버튼으로 업데이트를 확인할 수 있습니다.
+업데이트 파일은 GitHub Release에서 받은 뒤 서명, HTTPS 주소, SHA-256, 파일 크기를
+검증합니다. 설치 전 실행 중인 뉴스 수집과 내보내기를 안전하게 정리하며, 설치 실패 시
+이전 실행 파일로 복구합니다. 앱이 다시 실행된 뒤 실패 또는 복구 결과를 알려줍니다.
+
+자동 설치가 실패하면 [GitHub Releases](https://github.com/twbeatles/navernews-tabsearch/releases/latest)에서
+최신 `NewsScraperPro_Safe.exe`를 직접 내려받아 기존 프로그램을 종료한 뒤 교체하세요.
+사용자 데이터는 `%LOCALAPPDATA%\NaverNewsScraperPro`에 있으므로 업데이트 대상이 아닙니다.
+
+릴리즈 담당자는 [updates/README.md](updates/README.md)의 서명 매니페스트 발행 절차를 따르며,
+`NEWS_SCRAPER_UPDATE_PRIVATE_KEY_B64`는 GitHub Actions Secret으로만 보관해야 합니다.
