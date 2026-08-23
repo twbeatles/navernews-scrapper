@@ -1,5 +1,14 @@
 # Update History
 
+## v32.8.0 (2026-08-23)
+
+### 감사 후속 안정성 강화
+
+- 클라우드 snapshot의 구조적 손상과 일시적 DB/파일 오류를 분리해 유효한 원본이 자동 격리되는 문제를 수정하고, 격리 목록·재검증·복구·삭제 기능을 추가했습니다.
+- 실행 중인 DB-writing worker의 단순 분리를 종료로 간주하지 않아 유지보수 작업과 fetch가 겹치지 않도록 했습니다.
+- CSV formula를 중화하고 bookmark/note 가져오기를 기사 단위 transaction으로 묶었으며, 변경 없음·누락·실패·부분 반영 위치를 보고합니다.
+- 검증된 Windows/Python 3.14 dependency contract와 QtNetwork/entrypoint CI smoke를 추가하고 runtime 파일명 문서를 실제 상수와 일치시켰습니다.
+
 ## v32.7.9 (2026-08-16)
 
 ### Update Check Feedback Fix

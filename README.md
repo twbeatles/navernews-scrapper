@@ -49,9 +49,9 @@
 - 설치 과정 없이 즉시 실행되는 포터블 형태입니다.
 
 #### B. 소스코드에서 직접 실행 (개발자용)
-- Python 3.10 이상 환경에서 다음 명령어를 실행합니다:
+- Python 3.10 이상 환경에서 다음 명령어를 실행합니다. 릴리스 CI에서 검증하는 기준 환경은 Windows x64 / Python 3.14입니다:
 ```bash
-pip install PyQt6 requests cryptography
+pip install -r requirements.txt
 python news_scraper_pro.py
 ```
 
@@ -292,8 +292,8 @@ python news_scraper_pro.py
 > %LOCALAPPDATA%\NaverNewsScraperPro
 > (일반적인 경로: C:\Users\<사용자명>\AppData\Local\NaverNewsScraperPro)
 > ```
-> - 기사 데이터베이스: `news_data.db`
-> - 환경설정 파일: `config.json`
+> - 기사 데이터베이스: `news_database.db`
+> - 환경설정 파일: `news_scraper_config.json`
 > - 백업 아카이브: `backups/` 폴더
 
 #### Q5. 다른 PC로 설정을 내보냈는데 API 키가 비어 있습니다.

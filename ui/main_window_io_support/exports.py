@@ -4,6 +4,7 @@ import csv
 import json
 import logging
 import os
+import re
 import tempfile
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
@@ -43,21 +44,25 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 EXPORT_CHUNK_SIZE = 500
+_SPREADSHEET_FORMULA_PREFIX = re.compile(r"^[\s\x00-\x1f]*[=+\-@]")
 
 def _dialogs_for(target: Any):
     return get_dialog_adapter(target)
+def _spreadsheet_safe_csv_cell(value: Any) -> str:
+    text = str(value or "")
+    return "'" + text if _SPREADSHEET_FORMULA_PREFIX.match(text) else text
 def _export_row(item: Dict[str, Any]) -> List[str]:
     return [
-        str(item.get("title", "") or ""),
-        str(item.get("link", "") or ""),
-        str(item.get("pubDate", "") or ""),
-        str(item.get("publisher", "") or ""),
-        str(item.get("description", "") or ""),
+        _spreadsheet_safe_csv_cell(item.get("title", "")),
+        _spreadsheet_safe_csv_cell(item.get("link", "")),
+        _spreadsheet_safe_csv_cell(item.get("pubDate", "")),
+        _spreadsheet_safe_csv_cell(item.get("publisher", "")),
+        _spreadsheet_safe_csv_cell(item.get("description", "")),
         "읽음" if item.get("is_read") else "안읽음",
         "북마크" if item.get("is_bookmarked") else "",
-        str(item.get("notes", "") or ""),
+        _spreadsheet_safe_csv_cell(item.get("notes", "")),
         "중복" if item.get("is_duplicate", 0) else "",
-        str(item.get("tags", "") or ""),
+        _spreadsheet_safe_csv_cell(item.get("tags", "")),
     ]
 def _markdown_escape(value: Any) -> str:
     text = str(value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -444,45 +449,68 @@ def import_bookmarks_notes_from_csv(
 ) -> Dict[str, int]:
     processed = 0
     updated_rows = 0
+    unchanged_rows = 0
     missing_rows = 0
+    failed_rows = 0
     truncated_notes = 0
+    last_row = 1
     safe_chunk_size = max(1, int(chunk_size or 200))
+    def result_payload() -> Dict[str, int]:
+        return {
+            "processed": processed,
+            "updated": updated_rows,
+            "unchanged": unchanged_rows,
+            "missing": missing_rows,
+            "failed": failed_rows,
+            "truncated_notes": truncated_notes,
+            "last_row": last_row,
+        }
     with open(input_path, "r", newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         if not reader.fieldnames:
-            return {"processed": 0, "updated": 0, "missing": 0, "truncated_notes": 0}
+            return result_payload()
         for row in reader:
             context.check_cancelled()
             processed += 1
+            last_row = int(reader.line_num or processed + 1)
             link = str(row.get("링크") or row.get("link") or row.get("Link") or "").strip()
             if not link:
                 missing_rows += 1
-                continue
-            changed = False
-            if any(key in row for key in ("북마크", "bookmark", "Bookmark")):
-                bookmark_value = row.get("북마크", row.get("bookmark", row.get("Bookmark", "")))
-                changed = bool(db.update_status(link, "is_bookmarked", 1 if _csv_truthy(bookmark_value) else 0)) or changed
-            if any(key in row for key in ("메모", "notes", "Notes")):
-                note_value, note_truncated = truncate_note(
-                    row.get("메모", row.get("notes", row.get("Notes", "")))
-                )
-                if note_truncated:
-                    truncated_notes += 1
-                changed = bool(db.save_note(link, note_value)) or changed
-            if changed:
-                updated_rows += 1
             else:
-                missing_rows += 1
+                try:
+                    bookmark = None
+                    note = None
+                    if any(key in row for key in ("북마크", "bookmark", "Bookmark")):
+                        bookmark_value = row.get("북마크", row.get("bookmark", row.get("Bookmark", "")))
+                        bookmark = 1 if _csv_truthy(bookmark_value) else 0
+                    if any(key in row for key in ("메모", "notes", "Notes")):
+                        note, note_truncated = truncate_note(
+                            row.get("메모", row.get("notes", row.get("Notes", "")))
+                        )
+                        if note_truncated:
+                            truncated_notes += 1
+                    mutation = db.import_article_state(link, bookmark=bookmark, note=note)
+                    status = str(mutation.get("status", "failed") or "failed")
+                    if status == "updated":
+                        updated_rows += 1
+                    elif status == "unchanged":
+                        unchanged_rows += 1
+                    elif status == "missing":
+                        missing_rows += 1
+                    else:
+                        failed_rows += 1
+                except Exception as exc:
+                    failed_rows += 1
+                    logger.warning("CSV import row %s failed: %s", last_row, exc)
+            remember = getattr(context, "remember", None)
+            if callable(remember):
+                remember(result_payload())
             if processed % safe_chunk_size == 0:
                 context.report(
                     current=processed,
                     total=0,
                     message=f"CSV 가져오는 중... ({processed}행 처리)",
+                    payload=result_payload(),
                 )
-    context.report(current=processed, total=processed, message="CSV 가져오기 완료")
-    return {
-        "processed": processed,
-        "updated": updated_rows,
-        "missing": missing_rows,
-        "truncated_notes": truncated_notes,
-    }
+    context.report(current=processed, total=processed, message="CSV 가져오기 완료", payload=result_payload())
+    return result_payload()

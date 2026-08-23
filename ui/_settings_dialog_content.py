@@ -345,8 +345,11 @@ class _SettingsDialogContentMixin:
         btn_cloud_export.clicked.connect(self.cloud_sync_export_dialog)
         btn_cloud_import = QPushButton("지금 병합")
         btn_cloud_import.clicked.connect(self.cloud_sync_import_dialog)
+        btn_cloud_quarantine = QPushButton("격리 관리")
+        btn_cloud_quarantine.clicked.connect(self.cloud_sync_quarantine_dialog)
         cloud_buttons.addWidget(btn_cloud_export)
         cloud_buttons.addWidget(btn_cloud_import)
+        cloud_buttons.addWidget(btn_cloud_quarantine)
         cloud_layout.addLayout(cloud_buttons)
 
         self.lbl_cloud_sync_status = QLabel(str(self.config.get("cloud_sync_last_status", "") or ""))

@@ -39,6 +39,10 @@ class CloudSyncError(RuntimeError):
     pass
 
 
+class CloudSnapshotValidationError(CloudSyncError):
+    """The snapshot itself violates the archive/import contract."""
+
+
 @dataclass(frozen=True)
 class CloudSnapshot:
     path: str
@@ -62,5 +66,6 @@ __all__ = [
     "SANITIZED_ROOT_KEYS",
     "CLOUD_PATH_MARKERS",
     "CloudSyncError",
+    "CloudSnapshotValidationError",
     "CloudSnapshot",
 ]

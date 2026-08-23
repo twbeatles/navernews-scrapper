@@ -71,6 +71,10 @@ class LongTaskContext:
         if self.is_cancelled():
             raise JobCancelledError("cancelled")
 
+    def remember(self, payload: Optional[Dict[str, Any]] = None) -> None:
+        """Retain resumability/progress details without emitting a UI signal."""
+        self._worker.last_progress_payload = dict(payload or {})
+
     def report(
         self,
         *,
@@ -86,6 +90,7 @@ class LongTaskContext:
         }
         if payload:
             progress_payload.update(payload)
+            self.remember(payload)
         self._worker.progress.emit(progress_payload)
 class IterativeJobWorker(QThread):
     """Cancel-aware worker for repetitive or chunked background tasks."""
@@ -101,6 +106,7 @@ class IterativeJobWorker(QThread):
         self.job_func = job_func
         self.args = args
         self.kwargs = kwargs
+        self.last_progress_payload: Dict[str, Any] = {}
 
     def run(self):
         context = LongTaskContext(self)

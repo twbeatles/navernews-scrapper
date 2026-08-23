@@ -5,7 +5,7 @@ import tempfile
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, Sequence
 
-from core.cloud_sync_support.models import CloudSyncError
+from core.cloud_sync_support.models import CloudSnapshotValidationError, CloudSyncError
 from core.cloud_sync_support.path_policy import resolve_cloud_sync_dir
 from core.cloud_sync_support.snapshot_io import (
     cleanup_old_snapshots,
@@ -40,6 +40,8 @@ def select_cloud_snapshots_for_import(
     candidates: List[tuple[float, str, str]] = []
     errors: List[str] = []
     skipped_seen = 0
+    quarantined_count = 0
+    retryable_count = 0
     local_snapshot_id = str(local_snapshot_id or "")
     for zip_path in list_cloud_snapshots(sync_dir):
         try:
@@ -51,12 +53,16 @@ def select_cloud_snapshots_for_import(
                 skipped_seen += 1
                 continue
             candidates.append((os.path.getmtime(zip_path), zip_path, snapshot_id))
-        except Exception as exc:
+        except CloudSnapshotValidationError as exc:
             message = _snapshot_import_error(zip_path, exc)
             quarantined = quarantine_invalid_snapshot(zip_path, str(exc))
             if quarantined:
                 message += f" (quarantined: {os.path.basename(quarantined)})"
+                quarantined_count += 1
             errors.append(message)
+        except Exception as exc:
+            errors.append(_snapshot_import_error(zip_path, exc))
+            retryable_count += 1
 
     candidates.sort(key=lambda item: (item[0], item[1]))
     limit = max(1, int(max_imports or 20))
@@ -66,6 +72,8 @@ def select_cloud_snapshots_for_import(
         "errors": errors,
         "skipped_seen": skipped_seen,
         "pending_unseen": max(0, len(candidates) - len(selected)),
+        "quarantined_count": quarantined_count,
+        "retryable_count": retryable_count,
     }
 
 
@@ -198,7 +206,8 @@ def preview_cloud_snapshots_for_import(
     )
     previews: List[Dict[str, Any]] = []
     errors = list(selection.get("errors", []) or [])
-    invalid_count = len(errors)
+    quarantined_count = int(selection.get("quarantined_count", 0) or 0)
+    retryable_count = int(selection.get("retryable_count", 0) or 0)
     for zip_path in selection["paths"]:
         try:
             previews.append(
@@ -208,16 +217,21 @@ def preview_cloud_snapshots_for_import(
                     local_machine_id=local_machine_id,
                 )
             )
+        except CloudSnapshotValidationError as exc:
+            errors.append(_snapshot_import_error(zip_path, exc))
+            if quarantine_invalid_snapshot(zip_path, str(exc)):
+                quarantined_count += 1
         except Exception as exc:
             errors.append(_snapshot_import_error(zip_path, exc))
-            invalid_count += 1
-            quarantine_invalid_snapshot(zip_path, str(exc))
+            retryable_count += 1
     return {
         "paths": list(selection.get("paths", []) or []),
         "previews": previews,
         "totals": aggregate_cloud_import_preview(previews),
         "errors": errors,
-        "invalid_count": invalid_count,
+        "invalid_count": quarantined_count,
+        "quarantined_count": quarantined_count,
+        "retryable_count": retryable_count,
         "pending_unseen": selection.get("pending_unseen", 0),
         "skipped_seen": selection.get("skipped_seen", 0),
     }
@@ -242,7 +256,8 @@ def run_cloud_sync_cycle(
         max_imports=max_imports,
     )
     errors.extend(selection["errors"])
-    invalid_count = len(selection["errors"])
+    quarantined_count = int(selection.get("quarantined_count", 0) or 0)
+    retryable_count = int(selection.get("retryable_count", 0) or 0)
     pending_unseen = int(selection.get("pending_unseen", 0) or 0)
     skipped_seen = int(selection.get("skipped_seen", 0) or 0)
     for zip_path in selection["paths"]:
@@ -253,10 +268,13 @@ def run_cloud_sync_cycle(
                 local_machine_id=machine_id,
             )
             imported.append(result)
+        except CloudSnapshotValidationError as exc:
+            errors.append(_snapshot_import_error(zip_path, exc))
+            if quarantine_invalid_snapshot(zip_path, str(exc)):
+                quarantined_count += 1
         except Exception as exc:
             errors.append(_snapshot_import_error(zip_path, exc))
-            invalid_count += 1
-            quarantine_invalid_snapshot(zip_path, str(exc))
+            retryable_count += 1
 
     snapshot = create_cloud_snapshot(
         sync_dir=sync_dir,
@@ -275,7 +293,9 @@ def run_cloud_sync_cycle(
         "errors": errors,
         "merged_count": sum(1 for item in imported if bool(item.get("merged", False))),
         "skipped_count": sum(1 for item in imported if bool(item.get("skipped", False))),
-        "invalid_count": invalid_count,
+        "invalid_count": quarantined_count,
+        "quarantined_count": quarantined_count,
+        "retryable_count": retryable_count,
         "pending_unseen": pending_unseen,
         "skipped_seen": skipped_seen,
     }

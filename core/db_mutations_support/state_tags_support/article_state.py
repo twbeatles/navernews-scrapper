@@ -17,6 +17,51 @@ logger = logging.getLogger(__name__)
 
 
 class _NewsArticleStateMixin:
+    def import_article_state(
+        self: DatabaseManager,
+        link: str,
+        *,
+        bookmark: Optional[int] = None,
+        note: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Atomically import bookmark/note values for one existing article."""
+        if not isinstance(link, str) or not link.strip():
+            return {"status": "missing", "bookmark_changed": False, "note_changed": False}
+        normalized_note = normalize_note(note) if note is not None else None
+        normalized_bookmark = 1 if int(bookmark or 0) else 0 if bookmark is not None else None
+        conn = self.get_connection()
+        try:
+            with conn:
+                current = conn.execute(
+                    "SELECT COALESCE(is_bookmarked, 0), COALESCE(notes, '') FROM news WHERE link = ?",
+                    (link,),
+                ).fetchone()
+                if current is None:
+                    return {"status": "missing", "bookmark_changed": False, "note_changed": False}
+                bookmark_changed = normalized_bookmark is not None and int(current[0] or 0) != normalized_bookmark
+                note_changed = normalized_note is not None and str(current[1] or "") != normalized_note
+                now = datetime.now().timestamp()
+                if bookmark_changed:
+                    conn.execute(
+                        "UPDATE news SET is_bookmarked = ?, bookmark_updated_at = ? WHERE link = ?",
+                        (normalized_bookmark, now, link),
+                    )
+                if note_changed:
+                    conn.execute(
+                        "UPDATE news SET notes = ?, notes_updated_at = ? WHERE link = ?",
+                        (normalized_note, now, link),
+                    )
+            return {
+                "status": "updated" if bookmark_changed or note_changed else "unchanged",
+                "bookmark_changed": bookmark_changed,
+                "note_changed": note_changed,
+            }
+        except Exception as exc:
+            logger.error("import_article_state failed: %s", exc)
+            raise self._new_write_error("import_article_state", exc) from exc
+        finally:
+            self.return_connection(conn)
+
     def update_status(self: DatabaseManager, link: str, field: str, value) -> bool:
         """Update a safe allow-listed status field."""
         if field not in self.ALLOWED_UPDATE_FIELDS:

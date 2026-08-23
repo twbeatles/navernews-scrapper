@@ -20,6 +20,7 @@ from core.cloud_sync_support.models import (
     SNAPSHOT_PREFIX,
     SNAPSHOT_SUFFIX,
     CloudSnapshot,
+    CloudSnapshotValidationError,
     CloudSyncError,
 )
 from core.cloud_sync_support.path_policy import (
@@ -45,6 +46,10 @@ from core.cloud_sync_support.snapshot_io import (
     extract_snapshot,
     list_cloud_snapshots,
     quarantine_invalid_snapshot,
+    list_quarantined_snapshots,
+    revalidate_quarantined_snapshot,
+    restore_quarantined_snapshot,
+    delete_quarantined_snapshot,
     read_snapshot_manifest,
     sanitize_config_for_cloud,
 )

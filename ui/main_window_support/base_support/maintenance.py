@@ -5,6 +5,7 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass
+from enum import Enum
 from typing import Iterator, List, Optional
 
 from PyQt6.QtCore import QMutexLocker, QTimer
@@ -20,6 +21,17 @@ from ui.toast import ToastQueue
 logger = logging.getLogger(__name__)
 
 from ui.main_window_support.base_support.state import TabFetchState
+
+
+class WorkerCleanupOutcome(str, Enum):
+    ALREADY_FINISHED = "already_finished"
+    FINISHED = "finished"
+    DETACHED_RUNNING = "detached_running"
+    FAILED = "failed"
+
+    @property
+    def safe_for_database_maintenance(self) -> bool:
+        return self in {self.ALREADY_FINISHED, self.FINISHED}
 
 
 class _MainWindowMaintenanceMixin:
@@ -105,15 +117,14 @@ class _MainWindowMaintenanceMixin:
                 only_if_active=False,
                 wait_ms=remaining_ms,
             )
-            if not finished:
-                finished = self.cleanup_worker(
-                    keyword=handle.tab_keyword,
-                    request_id=handle.request_id,
-                    only_if_active=False,
-                    wait_ms=0,
-                    force=True,
+            outcome = WorkerCleanupOutcome.FINISHED if finished else WorkerCleanupOutcome.DETACHED_RUNNING
+            if not outcome.safe_for_database_maintenance:
+                logger.warning(
+                    "Worker is not safe for maintenance: %s (rid=%s, outcome=%s)",
+                    handle.tab_keyword,
+                    handle.request_id,
+                    outcome.value,
                 )
-            if not finished:
                 unfinished_keywords.append(handle.tab_keyword)
 
         export_worker = getattr(self, "_export_worker", None)
@@ -155,7 +166,7 @@ class _MainWindowMaintenanceMixin:
             logger.warning("Database maintenance blocked by active fetch workers: %s", keywords_txt)
             return (
                 False,
-                f"활성 새로고침을 1.5초 안에 정리하지 못했습니다: {keywords_txt}",
+                f"활성 새로고침이 1.5초 안에 실제 종료되지 않았습니다: {keywords_txt}",
             )
 
         operation_label = {

@@ -239,15 +239,15 @@ class TestMaintenanceMode(unittest.TestCase):
         self.assertEqual(dummy.hydration_delays, [50])
         self.assertEqual(dummy.fts_resume_delays, [250])
 
-    def test_begin_database_maintenance_force_detaches_worker_after_cleanup_timeout(self):
+    def test_begin_database_maintenance_does_not_treat_force_detach_as_completion(self):
         dummy = _DummyMain({(1, "AI"): False})
 
         started, reason = dummy.begin_database_maintenance("delete_old_news")
 
-        self.assertTrue(started)
-        self.assertEqual(reason, "")
-        self.assertTrue(dummy.is_maintenance_mode_active())
-        self.assertTrue(any(call[4] for call in dummy.cleanup_calls))
+        self.assertFalse(started)
+        self.assertIn("종료되지", reason)
+        self.assertFalse(dummy.is_maintenance_mode_active())
+        self.assertFalse(any(call[4] for call in dummy.cleanup_calls))
 
     def test_begin_database_maintenance_fails_when_force_detach_is_disabled(self):
         dummy = _DummyMain({(1, "AI"): False}, force_cleanup_results={(1, "AI"): False})

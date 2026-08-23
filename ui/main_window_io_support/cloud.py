@@ -20,6 +20,7 @@ from core.config_store import (
 )
 from core.cloud_sync import (
     aggregate_cloud_import_preview,
+    CloudSnapshotValidationError,
     cleanup_old_snapshots,
     cloud_sync_path_conflicts_with_runtime,
     create_cloud_snapshot,
@@ -263,7 +264,8 @@ class _MainWindowCloudSyncMixin:
                     max_imports=20,
                 )
                 errors.extend(selection["errors"])
-                invalid_count = len(selection["errors"])
+                quarantined_count = int(selection.get("quarantined_count", 0) or 0)
+                retryable_count = int(selection.get("retryable_count", 0) or 0)
                 for zip_path in selection["paths"]:
                     context.check_cancelled()
                     try:
@@ -274,10 +276,13 @@ class _MainWindowCloudSyncMixin:
                                 local_machine_id=machine_id,
                             )
                         )
+                    except CloudSnapshotValidationError as exc:
+                        errors.append(f"{os.path.basename(zip_path)}: {exc}")
+                        if quarantine_invalid_snapshot(zip_path, str(exc)):
+                            quarantined_count += 1
                     except Exception as exc:
                         errors.append(f"{os.path.basename(zip_path)}: {exc}")
-                        invalid_count += 1
-                        quarantine_invalid_snapshot(zip_path, str(exc))
+                        retryable_count += 1
                 cleanup_old_snapshots(sync_dir, keep=100)
                 return {
                     "mode": mode,
@@ -285,7 +290,9 @@ class _MainWindowCloudSyncMixin:
                     "imported": imported,
                     "import_totals": aggregate_cloud_import_preview(imported),
                     "errors": errors,
-                    "invalid_count": invalid_count,
+                    "invalid_count": quarantined_count,
+                    "quarantined_count": quarantined_count,
+                    "retryable_count": retryable_count,
                     "pending_unseen": selection.get("pending_unseen", 0),
                     "skipped_seen": selection.get("skipped_seen", 0),
                     "interval_minutes": interval_minutes,
@@ -331,9 +338,12 @@ class _MainWindowCloudSyncMixin:
             f"삭제 {int(import_totals.get('deleted', 0) or 0):,}, 복구 {int(import_totals.get('restored', 0) or 0):,}"
         )
         invalid_count = int(result.get("invalid_count", 0) or 0)
+        retryable_count = int(result.get("retryable_count", 0) or 0)
         pending_unseen = int(result.get("pending_unseen", 0) or 0)
         if invalid_count:
-            status += f", 무시한 스냅샷 {invalid_count}개"
+            status += f", 격리 {invalid_count}개"
+        if retryable_count:
+            status += f", 재시도 예정 {retryable_count}개"
         if pending_unseen:
             status += f", 대기 {pending_unseen}개"
         if errors:

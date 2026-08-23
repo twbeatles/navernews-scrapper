@@ -304,6 +304,15 @@ class _MainWindowDataIOMixin:
             return
 
         self._csv_import_maintenance_active = callable(begin_maintenance)
+        self._csv_import_last_result = {
+            "processed": 0,
+            "updated": 0,
+            "unchanged": 0,
+            "missing": 0,
+            "failed": 0,
+            "truncated_notes": 0,
+            "last_row": 1,
+        }
         self.progress.setVisible(True)
         self.progress.setRange(0, 0)
         self.progress.setValue(0)
@@ -334,6 +343,7 @@ class _MainWindowDataIOMixin:
                 pass
         self._csv_import_maintenance_active = False
     def _on_csv_import_progress(self: MainApp, payload: Dict[str, Any]) -> None:
+        self._csv_import_last_result = dict(payload)
         current = int(payload.get("current", 0) or 0)
         total = int(payload.get("total", 0) or 0)
         message = str(payload.get("message", "") or "")
@@ -348,23 +358,51 @@ class _MainWindowDataIOMixin:
         processed = int(result.get("processed", 0) or 0)
         updated = int(result.get("updated", 0) or 0)
         missing = int(result.get("missing", 0) or 0)
+        unchanged = int(result.get("unchanged", 0) or 0)
+        failed = int(result.get("failed", 0) or 0)
+        last_row = int(result.get("last_row", 0) or 0)
         truncated_notes = int(result.get("truncated_notes", 0) or 0)
         self._finish_csv_import_ui()
         suffix = f" / 긴 메모 잘림 {truncated_notes}개" if truncated_notes else ""
-        self._status_bar().showMessage(f"CSV 가져오기 완료: 갱신 {updated}개 / 건너뜀 {missing}개{suffix}", 5000)
+        self._status_bar().showMessage(
+            f"CSV 가져오기 완료: 갱신 {updated} / 동일 {unchanged} / 없음 {missing} / 실패 {failed}{suffix}",
+            5000,
+        )
         self.show_success_toast(f"CSV 가져오기 완료: {updated}개 기사 갱신")
         self.on_database_maintenance_completed("csv_import", updated)
         _dialogs_for(self).information(
             self,
             "CSV 가져오기 완료",
-            f"처리 행: {processed:,}개\n기존 기사 갱신: {updated:,}개\n건너뜀: {missing:,}개"
+            f"처리 행: {processed:,}개 (마지막 CSV 행 {last_row:,})\n"
+            f"기존 기사 갱신: {updated:,}개\n변경 없음: {unchanged:,}개\n"
+            f"기사가 없음: {missing:,}개\n실패: {failed:,}개"
             + (f"\n10,000자를 넘겨 잘린 메모: {truncated_notes:,}개" if truncated_notes else ""),
         )
     def _on_csv_import_error(self: MainApp, error_msg: str) -> None:
+        worker = getattr(self, "_csv_import_worker", None)
+        partial = dict(getattr(worker, "last_progress_payload", {}) or getattr(self, "_csv_import_last_result", {}) or {})
         self._finish_csv_import_ui()
         self._status_bar().showMessage("CSV 가져오기에 실패했습니다.", 4000)
-        _dialogs_for(self).warning(self, "CSV 가져오기 오류", f"CSV 가져오기 중 오류가 발생했습니다:\n{error_msg}")
+        _dialogs_for(self).warning(
+            self,
+            "CSV 가져오기 오류",
+            f"CSV 가져오기 중 오류가 발생했습니다:\n{error_msg}\n\n"
+            f"오류 전 반영: {int(partial.get('updated', 0) or 0):,}개 / "
+            f"처리: {int(partial.get('processed', 0) or 0):,}행 / "
+            f"마지막 CSV 행: {int(partial.get('last_row', 0) or 0):,}",
+        )
     def _on_csv_import_cancelled(self: MainApp) -> None:
+        worker = getattr(self, "_csv_import_worker", None)
+        partial = dict(getattr(worker, "last_progress_payload", {}) or getattr(self, "_csv_import_last_result", {}) or {})
         self._finish_csv_import_ui()
-        self._status_bar().showMessage("CSV 가져오기를 취소했습니다.", 3000)
-        self.show_warning_toast("CSV 가져오기를 취소했습니다.")
+        message = (
+            f"CSV 가져오기를 취소했습니다. 부분 반영 {int(partial.get('updated', 0) or 0):,}개 / "
+            f"처리 {int(partial.get('processed', 0) or 0):,}행"
+        )
+        self._status_bar().showMessage(message, 5000)
+        self.show_warning_toast(message)
+        _dialogs_for(self).information(
+            self,
+            "CSV 가져오기 취소",
+            message + f"\n마지막 CSV 행: {int(partial.get('last_row', 0) or 0):,}",
+        )

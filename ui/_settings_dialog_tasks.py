@@ -7,7 +7,14 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 import requests
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+
+from core.cloud_sync import (
+    delete_quarantined_snapshot,
+    list_quarantined_snapshots,
+    restore_quarantined_snapshot,
+    revalidate_quarantined_snapshot,
+)
 
 from core.constants import DATA_DIR, RUNTIME_PATHS, RuntimePaths
 from core.database import DatabaseManager
@@ -531,6 +538,61 @@ class _SettingsDialogTasksMixin:
             sync_dir_override=sync_dir,
             interval_override=interval,
         )
+
+    def cloud_sync_quarantine_dialog(self: SettingsDialog):
+        sync_dir = self.txt_cloud_sync_dir.text().strip() if hasattr(self, "txt_cloud_sync_dir") else ""
+        if not sync_dir:
+            QMessageBox.information(self, "클라우드 격리 관리", "먼저 클라우드 동기화 폴더를 선택하세요.")
+            return
+        try:
+            entries = list_quarantined_snapshots(sync_dir)
+        except Exception as exc:
+            QMessageBox.warning(self, "클라우드 격리 관리", f"격리 목록을 읽지 못했습니다.\n\n{exc}")
+            return
+        if not entries:
+            QMessageBox.information(self, "클라우드 격리 관리", "격리된 스냅샷이 없습니다.")
+            return
+        labels = [
+            f"{entry.get('original_name') or entry['name']} — {entry.get('reason') or '이유 없음'}"
+            for entry in entries
+        ]
+        selected, accepted = QInputDialog.getItem(
+            self,
+            "클라우드 격리 관리",
+            "재검증할 스냅샷:",
+            labels,
+            0,
+            False,
+        )
+        if not accepted:
+            return
+        entry = entries[labels.index(selected)]
+        try:
+            validation = revalidate_quarantined_snapshot(sync_dir, entry["name"])
+            if bool(validation.get("valid")):
+                if QMessageBox.question(
+                    self,
+                    "클라우드 격리 관리",
+                    "스냅샷 검증에 성공했습니다. 원래 위치로 복구할까요?",
+                ) == QMessageBox.StandardButton.Yes:
+                    restored = restore_quarantined_snapshot(sync_dir, entry["name"])
+                    QMessageBox.information(self, "클라우드 격리 관리", f"복구했습니다.\n{restored}")
+                    return
+            else:
+                QMessageBox.warning(
+                    self,
+                    "클라우드 격리 관리",
+                    f"여전히 유효하지 않은 스냅샷입니다.\n\n{validation.get('reason', '')}",
+                )
+            if QMessageBox.question(
+                self,
+                "클라우드 격리 관리",
+                "이 격리 항목을 영구 삭제할까요?",
+            ) == QMessageBox.StandardButton.Yes:
+                delete_quarantined_snapshot(sync_dir, entry["name"])
+                QMessageBox.information(self, "클라우드 격리 관리", "격리 항목을 삭제했습니다.")
+        except Exception as exc:
+            QMessageBox.warning(self, "클라우드 격리 관리", f"작업을 완료하지 못했습니다.\n\n{exc}")
 
     def show_log_dialog(self: SettingsDialog):
         parent = self._typed_parent()

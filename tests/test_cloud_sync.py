@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 from core.cloud_sync import (
     CloudSyncError,
@@ -12,6 +13,9 @@ from core.cloud_sync import (
     import_cloud_snapshot,
     preview_cloud_snapshots_for_import,
     quarantine_invalid_snapshot,
+    list_quarantined_snapshots,
+    revalidate_quarantined_snapshot,
+    restore_quarantined_snapshot,
     read_snapshot_manifest,
     run_cloud_sync_cycle,
     select_cloud_snapshots_for_import,
@@ -338,6 +342,65 @@ class TestCloudSync(unittest.TestCase):
             finally:
                 source.close()
                 target.close()
+
+    def test_transient_preview_failure_preserves_valid_snapshot_for_retry(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            sync_dir = root / "sync"
+            sync_dir.mkdir()
+            source = self._db(root / "source.db")
+            target = self._db(root / "target.db")
+            try:
+                source.upsert_news([_item(9)], "AI", query_key="ai|")
+                snapshot = create_cloud_snapshot(
+                    sync_dir=str(sync_dir),
+                    config={"app_settings": {}},
+                    db_file=source.db_file,
+                    machine_id="machine-a",
+                    app_version="test",
+                )
+                with mock.patch(
+                    "core.cloud_sync_support.import_flow.preview_cloud_snapshot_import",
+                    side_effect=DatabaseWriteError("preview_cloud_snapshot", "database is locked"),
+                ):
+                    result = preview_cloud_snapshots_for_import(
+                        db_manager=target,
+                        sync_dir=str(sync_dir),
+                        local_machine_id="machine-b",
+                    )
+                self.assertTrue(Path(snapshot.path).exists())
+                self.assertEqual(result["retryable_count"], 1)
+                self.assertEqual(result["quarantined_count"], 0)
+            finally:
+                source.close()
+                target.close()
+
+    def test_quarantined_snapshot_can_be_listed_revalidated_and_restored(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            sync_dir = root / "sync"
+            sync_dir.mkdir()
+            db = self._db(root / "source.db")
+            try:
+                snapshot = create_cloud_snapshot(
+                    sync_dir=str(sync_dir),
+                    config={"app_settings": {}},
+                    db_file=db.db_file,
+                    machine_id="machine-a",
+                    app_version="test",
+                )
+                quarantined = quarantine_invalid_snapshot(snapshot.path, "manual test")
+                entries = list_quarantined_snapshots(str(sync_dir))
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0]["reason"], "manual test")
+                validation = revalidate_quarantined_snapshot(str(sync_dir), Path(quarantined).name)
+                self.assertTrue(validation["valid"])
+                restored = restore_quarantined_snapshot(str(sync_dir), Path(quarantined).name)
+                self.assertEqual(Path(restored).name, Path(snapshot.path).name)
+                self.assertTrue(Path(restored).exists())
+                self.assertEqual(list_quarantined_snapshots(str(sync_dir)), [])
+            finally:
+                db.close()
 
     def test_merge_failure_rolls_back_local_db(self):
         with tempfile.TemporaryDirectory() as td:
